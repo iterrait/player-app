@@ -1,6 +1,6 @@
 {
   "name": "iterra-player",
-  "version": "0.7.10",
+  "version": "0.7.11",
   "main": "electron-main.js",
   "license": "MIT",
   "scripts": {
@@ -12,6 +12,9 @@
     "deploy:electron": "electron-builder build --win --publish always",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
+  },
+  "nsis": {
+    "deleteAppDataOnUninstall": true
   },
   "build": {
     "appId": "iterrait/player-app",
