@@ -58,11 +58,15 @@ function createWindow () {
 
 app.on('ready', function (){
   createWindow();
-  setInterval(() => {
+  setTimeout(() => {
     autoUpdater.checkForUpdates().then(() => {
     });
   }, 10000);
 })
+
+autoUpdater.on('update-downloaded', () => {
+  autoUpdater.quitAndInstall();
+});
 
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit()
