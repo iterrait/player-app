@@ -1,6 +1,6 @@
 {
   "name": "iterra-player",
-  "version": "0.7.8",
+  "version": "0.7.9",
   "main": "electron-main.js",
   "license": "MIT",
   "scripts": {
