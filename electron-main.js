@@ -58,7 +58,10 @@ function createWindow () {
 
 app.on('ready', function (){
   createWindow();
-  autoUpdater.checkForUpdates();
+  setInterval(() => {
+    autoUpdater.checkForUpdates().then(() => {
+    });
+  }, 10000);
 })
 
 app.on('window-all-closed', function () {
