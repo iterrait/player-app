@@ -1,7 +1,6 @@
 const { app, BrowserWindow, Menu } = require('electron');
 const { autoUpdater } = require('electron-updater');
 
-
 let configWindow, mainWindow;
 
 let mainWindowOptions = {
