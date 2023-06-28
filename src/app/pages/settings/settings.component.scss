@@ -1,0 +1,68 @@
+@import './src/assets/style/variables';
+
+form {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  height: 100%;
+  width: 100%;
+  padding: 16px;
+  margin: 0 auto;
+  overflow-y: auto;
+  background-color: $color-body;
+}
+
+.item_1-2 {
+  display: flex;
+  align-items: center;
+  width: 100%;
+
+  & > div {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+
+    &:not(:first-child) {
+      padding-left: 20px;
+    }
+  }
+}
+
+.heading {
+  padding-bottom: 12px;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+input {
+  width: 100%;
+}
+
+.item {
+  width: 100%;
+}
+
+.wide {
+  width: 100%;
+}
+
+.add-media {
+  position: absolute;
+  bottom: 36px;
+  right: 36px;
+  width: 56px;
+  height: 58px;
+  border-radius: 50%;
+  z-index: 2;
+  outline: none;
+  background-color: #236eff;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='none'%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M11 9H20V11H11V20H9V11H0V9H9V0H11V9Z' fill='white'/%3e%3c/svg%3e");
+}
+
+.save-button {
+  min-height: 40px;
+}

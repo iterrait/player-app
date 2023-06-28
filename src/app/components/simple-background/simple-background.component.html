@@ -1,0 +1,23 @@
+<div
+  *ngIf="backgroundConfig"
+  class="background-overlay"
+  [style.width.px]="backgroundConfig.backgroundWidth || 0"
+  [style.height.px]="backgroundConfig.backgroundHeight || 0"
+  [style.top.px]="backgroundConfig.backgroundTop || 0"
+  [style.left.px]="backgroundConfig.backgroundLeft || 0"
+  [style.z-index]="backgroundConfig.backgroundLayer && backgroundConfig.backgroundLayer === 'front' ? '3' : '-1'">
+  <video
+    *ngIf="backgroundConfig.backgroundType === 'video'"
+    [src]="backgroundConfig.backgroundPath"
+    loading="eager"
+    autoplay
+    muted
+    loop>
+  </video>
+  <img
+    *ngIf="backgroundConfig.backgroundType === 'image'"
+    [src]="backgroundConfig.backgroundPath"
+    loading="eager"
+    decoding="async"
+  />
+</div>

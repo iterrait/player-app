@@ -1,0 +1,17 @@
+<form [formGroup]="form">
+  <mat-form-field>
+    <select matNativeControl formControlName="objectType">
+      <option *ngFor="let itemType of playlistItemTypes" [value]="itemType.objType">{{itemType.title}}</option>
+    </select>
+  </mat-form-field>
+
+  <mat-form-field>
+    <input matInput placeholder="Значение" formControlName="objectValue" (click)="processValue()">
+  </mat-form-field>
+
+  <mat-form-field>
+    <input matInput placeholder="Время" formControlName="time">
+  </mat-form-field>
+
+  <button type="button" class="icon-button trash-media" (click)="onDeleteItem()"></button>
+</form>
