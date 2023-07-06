@@ -1,3 +1,7 @@
+<ng-container *ngIf="!currentMedia">
+  <div class="sleep-block"></div>
+</ng-container>
+
 <ng-container *ngIf="currentMedia && currentMedia.type === 'slot'">
   <div class="wrapper-post"
        #wrapperPost
@@ -47,18 +51,35 @@
   </canvas>
 </ng-container>
 
-<ng-container *ngIf="currentMedia && currentMedia.type === 'file'">
+<ng-container *ngIf="currentMedia && currentMedia.singleObjectType">
   <img
-    *ngIf="isImageSingleObject"
+    *ngIf="currentMedia.singleObjectType === 'image'"
     class="full-wide-object"
     [src]="currentMedia.singleMediaPath"
   />
   <video
-    *ngIf="isVideoSingleObject"
+    *ngIf="currentMedia.singleObjectType === 'video'"
+    #singleVideo
     class="full-wide-object"
     [src]="currentMedia.singleMediaPath"
     autoplay
     muted
-    loop>
+    loop
+    (loadedmetadata)="loadedSingleData($event, singleVideo)">
+    <source
+      *ngIf="currentMedia.singleObjectExtension === 'mp4'"
+      [src]="currentMedia.singleMediaPath"
+      type="video/mp4"
+    />
+    <source
+      *ngIf="currentMedia.singleObjectExtension === 'ogg'"
+      [src]="currentMedia.singleMediaPath"
+      type="video/ogg"
+    />
+    <source
+      *ngIf="currentMedia.singleObjectExtension === 'avi'"
+      [src]="currentMedia.singleMediaPath"
+      type="video/avi"
+    />
   </video>
 </ng-container>

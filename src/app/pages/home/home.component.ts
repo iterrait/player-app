@@ -1,10 +1,15 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, ViewChild} from '@angular/core';
-import { forkJoin} from 'rxjs';
-import { take} from 'rxjs/operators';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, ViewChild } from '@angular/core';
+import { forkJoin } from 'rxjs';
 
-import { IpcService} from '../../services/ipc-renderer.service';
-import { SlotService} from '../../services/slot.service';
-import { PlayerConfig, PlayerMedia, PlaylistMedia} from '../../types/player.types';
+import { BaseComponent } from '$directives/base.component';
+import { IpcService} from '$services/ipc-renderer.service';
+import { SlotService} from '$services/slot.service';
+import {
+  PlayerConfig,
+  PlayerMedia,
+  PlaylistMedia,
+} from '$types/player.types';
+import { ObjectsService } from '$services/objects.service';
 
 @Component({
   selector: 'home',
@@ -12,7 +17,7 @@ import { PlayerConfig, PlayerMedia, PlaylistMedia} from '../../types/player.type
   styleUrls: ['./home.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HomeComponent {
+export class HomeComponent extends BaseComponent {
   @ViewChild('wrapperPost') public wrapperPost!: ElementRef<HTMLElement>;
   @ViewChild('postCanvas') public postCanvas!: ElementRef<HTMLCanvasElement>;
 
@@ -33,12 +38,6 @@ export class HomeComponent {
   protected messageText = '#сообщение';
   protected eventText = '#событие';
 
-  protected imageExtensions = ['jpg', 'gif', 'png'];
-  protected videoExtensions = ['mp4', '3gp', 'ogg'];
-
-  protected isImageSingleObject = false;
-  protected isVideoSingleObject = false;
-
   public imageBlock: Record<string, any> = {};
   public videoBlock: Record<string, any> = {};
 
@@ -54,8 +53,11 @@ export class HomeComponent {
   constructor(
     private changeDetectorRef: ChangeDetectorRef,
     private ipcService: IpcService,
+    private objectsService: ObjectsService,
     private slotService: SlotService,
   ) {
+    super();
+
     this.getPLayerConfig();
 
     this.windowHeight = window.innerHeight;
@@ -75,22 +77,23 @@ export class HomeComponent {
     this.ipcService.on('player-rotation-config', (event, config) => {
       this.playerConfig = config;
 
-      const mediaSlots: PlayerMedia[] = config.media.filter((item: PlayerMedia) => item.objectType === 'slot');
+      const mediaSlots: PlayerMedia[] = config.playlistSettings.media
+        .filter((item: PlayerMedia) => item.objectType === 'slot');
       const slotIdIn = mediaSlots.map((item) => item.objectValue).join(',');
 
-      if (this.playerConfig?.token) {
+      if (this.playerConfig?.playerSettings.iterraToken) {
         forkJoin([
-          this.slotService.fetchSlotWidgets(slotIdIn, this.playerConfig.token),
-          this.slotService.fetchSlotConfigs(slotIdIn, this.playerConfig.token)
+          this.slotService.fetchSlotWidgets(slotIdIn, this.playerConfig.playerSettings.iterraToken),
+          this.slotService.fetchSlotConfigs(slotIdIn, this.playerConfig.playerSettings.iterraToken)
         ])
           .subscribe({
               next: ([slotWidgets, slotWidgetConfigs]) => {
                 this.playlist = [];
 
-                this.playerConfig?.media.forEach((item) => {
+                this.playerConfig?.playlistSettings.media.forEach((item) => {
                   const object: PlaylistMedia = {
                     type: item.objectType,
-                  }
+                  };
 
                   switch (item.objectType) {
                     case 'slot':
@@ -111,7 +114,6 @@ export class HomeComponent {
                   this.playlist.push(object);
                 });
 
-
                 this.showMediaObject();
               },
               error: (error) => console.log('error', error)
@@ -127,34 +129,36 @@ export class HomeComponent {
 
     switch (this.playlist[this.mediaIndex].type) {
       case 'slot':
-        this.slotService.moveCounter(this.playlist[this.mediaIndex].slotId!, this.playerConfig?.token!)
-          .pipe(take(1))
-          .subscribe();
+        if (this.playlist[this.mediaIndex].slotId && this.playerConfig?.playerSettings.iterraToken) {
+          this.slotService
+            .moveCounter(this.playlist[this.mediaIndex].slotId!, this.playerConfig?.playerSettings.iterraToken!)
+            .pipe(this.takeUntilDestroy())
+            .subscribe();
+        }
         this.processSlot();
         break;
       case 'file':
         this.processSingleObject();
         break;
     }
-
-    this.mediaObjectTimeoutId = setTimeout(() => {
-      this.mediaIndex = (this.mediaIndex === this.playlist.length - 1) ? 0 : ++this.mediaIndex;
-      this.showMediaObject();
-    }, this.playerConfig?.media[this.mediaIndex].time || 0);
   }
 
   protected processSingleObject(): void {
-    if (!this.currentMedia) {
+    if (!this.currentMedia || !this.currentMedia.singleMediaPath) {
       return;
     }
 
-    const extension = this.currentMedia.singleMediaPath?.split('.')[1];
+    this.currentMedia.singleObjectType =
+      this.objectsService.determineSingleObjectType(this.currentMedia.singleMediaPath);
 
-    if (extension) {
-      this.isImageSingleObject = this.imageExtensions.includes(extension);
-      this.isVideoSingleObject = this.videoExtensions.includes(extension);
-      this.changeDetectorRef.detectChanges();
+    this.currentMedia.singleObjectExtension =
+      this.objectsService.determineSingleObjectExtension(this.currentMedia.singleMediaPath);
+
+    if (this.currentMedia.singleObjectType === 'image') {
+      this.getNextShowMediaObject(this.playerConfig?.playlistSettings.media[this.mediaIndex].time || 0);
     }
+
+    this.changeDetectorRef.detectChanges();
   }
 
   protected processSlot(): void {
@@ -165,11 +169,12 @@ export class HomeComponent {
       return;
     }
 
-    this.slotService.getPosts(postIds, this.playerConfig?.token!).subscribe({
+    this.slotService.getPosts(postIds, this.playerConfig?.playerSettings.iterraToken!).subscribe({
       next: (posts) => {
         posts.sort((a, b) => a.id - b.id);
         this.playlist[this.mediaIndex].slotPosts = posts;
         this.addPost();
+        this.getNextShowMediaObject(this.playerConfig?.playlistSettings.media[this.mediaIndex].time || 0);
       },
       error: (error) => console.log('error', error)
     })
@@ -208,6 +213,11 @@ export class HomeComponent {
     this.goToNextPost();
   }
 
+  protected loadedSingleData(event: Event, singleVideo: HTMLVideoElement): void {
+    this.clearTimeouts();
+    this.getNextShowMediaObject(singleVideo?.duration * 1000 || 0);
+  }
+
   protected goToNextPost(): void {
     const slotId = this.playlist[this.mediaIndex].slotId;
 
@@ -217,8 +227,9 @@ export class HomeComponent {
         : ++this.currentSlotsIndex[slotId!];
 
     if (this.currentSlotsIndex[slotId!] === 0) {
-      this.slotService.fetchSlotConfigs(this.playlist[this.mediaIndex].slotId!, this.playerConfig?.token!)
-        .pipe(take(1))
+      this.slotService
+        .fetchSlotConfigs(this.playlist[this.mediaIndex].slotId!, this.playerConfig?.playerSettings.iterraToken!)
+        .pipe(this.takeUntilDestroy())
         .subscribe({
           next: (configs) => {
             this.playlist[this.mediaIndex].slotConfigData = configs[0].data;
@@ -260,12 +271,23 @@ export class HomeComponent {
     }
   }
 
-  private drawCanvasVideo(video: HTMLVideoElement, ctx: CanvasRenderingContext2D, width: number, height: number): void {
+  private drawCanvasVideo(
+    video: HTMLVideoElement,
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number): void {
     if (video.paused || video.ended) return;
 
     ctx.drawImage(video, 0, 0, width, height);
     setTimeout(() => {
       this.drawCanvasVideo(video, ctx, width, height)
     }, 20);
+  }
+
+  private getNextShowMediaObject(duration: number): void {
+    this.mediaObjectTimeoutId = setTimeout(() => {
+      this.mediaIndex = (this.mediaIndex === this.playlist.length - 1) ? 0 : ++this.mediaIndex;
+      this.showMediaObject();
+    }, duration);
   }
 }

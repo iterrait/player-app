@@ -1,8 +1,9 @@
-import { AfterViewInit, ChangeDetectorRef, Component } from '@angular/core';
-import { FormArray, FormBuilder, FormGroup } from '@angular/forms';
+import { AfterViewInit, ChangeDetectorRef, Component, ViewChild } from '@angular/core';
+import { FormBuilder, FormGroup } from '@angular/forms';
 
-import { IpcService } from '../../services/ipc-renderer.service';
-import { PlayerConfig } from '../../types/player.types';
+import { IpcService } from '$services/ipc-renderer.service';
+import { PlayerConfig } from '$types/player.types';
+import { PlaylistSettingsComponent } from './playlist-settings/playlist-settings.component';
 
 @Component({
   selector: 'settings',
@@ -10,18 +11,13 @@ import { PlayerConfig } from '../../types/player.types';
   styleUrls: ['./settings.component.scss']
 })
 export class SettingsComponent implements AfterViewInit {
+  @ViewChild(PlaylistSettingsComponent) public playlistSettings!: PlaylistSettingsComponent;
+
+  protected isVisibleMediaButton = true;
   protected form: FormGroup = this.formBuilder.group({
-    start: [null],
-    end: [null],
-    token: [null],
-    media: this.formBuilder.array([]),
+    playerSettings: [null],
+    playlistSettings: [null],
   });
-
-  protected format: number = 24;
-
-  protected get media(): FormArray {
-    return this.form.get('media') as FormArray;
-  }
 
   constructor(
     private formBuilder: FormBuilder,
@@ -39,33 +35,26 @@ export class SettingsComponent implements AfterViewInit {
   }
 
   protected setFormData(config: PlayerConfig): void {
-    console.log('config', config);
     this.form.reset();
 
     this.form.patchValue({
-      start: config.start,
-      end: config.end,
-      token: config.token,
+      playerSettings: config?.playerSettings,
+      playlistSettings: config?.playlistSettings,
     });
 
-    this.media.clear();
-
-    config.media.forEach((item) => {
-      this.media.push(this.formBuilder.control(item));
-    });
-    this.changeDetectorRef.detectChanges();
-  }
-
-  protected deleteItem(index: number): void {
-    this.media.removeAt(index);
-    this.changeDetectorRef.detectChanges();
+    this.changeDetectorRef.markForCheck();
   }
 
   protected saveForm(): void {
     this.ipcService.send('set-player-config', this.form.value);
   }
 
-  protected addMedia(): void {
-    this.media.push(this.formBuilder.control({}));
+  protected addPlaylistMedia(): void {
+    this.playlistSettings.addMedia();
+  }
+
+  protected onTabChange(index: number) {
+    this.isVisibleMediaButton = !index;
+    this.changeDetectorRef.markForCheck();
   }
 }

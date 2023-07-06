@@ -1,0 +1,59 @@
+<form [formGroup]="form" class="player-settings">
+  <div class="player-settings__item_1-2">
+    <mat-form-field>
+      <mat-label>Номер плеера</mat-label>
+      <input matInput formControlName="playerNumber">
+    </mat-form-field>
+
+    <mat-form-field>
+      <mat-label>Anydesk ID</mat-label>
+      <input matInput formControlName="anydeskId">
+    </mat-form-field>
+  </div>
+
+  <div class="player-settings__item_1-2">
+    <mat-form-field>
+      <mat-label>Организация</mat-label>
+      <input matInput formControlName="organization">
+    </mat-form-field>
+
+    <mat-form-field>
+      <mat-label>Адрес</mat-label>
+      <input matInput formControlName="address">
+    </mat-form-field>
+  </div>
+
+  <mat-form-field>
+    <mat-label>Проект</mat-label>
+    <select matNativeControl formControlName="project">
+      <option *ngFor="let project of projects" [value]="project.value">{{project.title}}</option>
+    </select>
+  </mat-form-field>
+
+  <div class="player-settings__item_1-2">
+    <mat-form-field>
+      <mat-label>Ответственный</mat-label>
+      <input matInput formControlName="responsible">
+    </mat-form-field>
+
+    <mat-form-field>
+      <mat-label>Телефон</mat-label>
+      <input matInput [imask]="phoneMask" formControlName="phone">
+    </mat-form-field>
+  </div>
+
+  <mat-form-field>
+    <mat-label>Telegram Chat ID</mat-label>
+    <input matInput formControlName="telegramChatID">
+  </mat-form-field>
+
+  <mat-form-field>
+    <mat-label>Telegram Bot Token</mat-label>
+    <input matInput type="password" formControlName="telegramBotToken">
+  </mat-form-field>
+
+  <mat-form-field>
+    <mat-label>iTerra Token</mat-label>
+    <input matInput type="password" formControlName="iterraToken">
+  </mat-form-field>
+</form>

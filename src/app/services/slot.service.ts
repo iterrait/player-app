@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 
-import {Post, SlotWidget, SlotWidgetConfig} from '../types/slot.types';
-import { ApiService } from './api.service';
+import { ApiService } from '$services/api.service';
+import type { Post, SlotWidget, SlotWidgetConfig } from '$types/slot.types';
 
 @Injectable({
   providedIn: 'root',

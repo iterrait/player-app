@@ -5,7 +5,7 @@ import {
   Input,
 } from '@angular/core';
 
-import { SlotWidgetConfigData } from '../../types/slot.types';
+import type { SlotWidgetConfigData } from '$types/slot.types';
 
 @Component({
   selector: 'simple-background',

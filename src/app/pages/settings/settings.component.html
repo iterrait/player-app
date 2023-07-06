@@ -1,59 +1,26 @@
-<form [formGroup]=form (ngSubmit)="saveForm()">
-  <div class="item heading">Режим работы плеера</div>
-  <div class="item_1-2">
-    <div>
-      <mat-label class="heading">Начало работы</mat-label>
-      <mat-form-field>
-        <input
-          matInput
-          formControlName="start"
-          [format]=format
-          [ngxMatTimepicker]="pickerStart"
-          placeholder="00:00"
-          readonly/>
-      </mat-form-field>
-      <ngx-mat-timepicker color="primary" #pickerStart></ngx-mat-timepicker>
-    </div>
-    <div>
-      <mat-label class="heading">Окончание работы</mat-label>
-      <mat-form-field>
-        <input
-          matInput
-          formControlName="end"
-          [format]=format
-          [ngxMatTimepicker]="pickerEnd"
-          placeholder="00:00"
-          readonly/>
-      </mat-form-field>
-      <ngx-mat-timepicker color="primary" #pickerEnd></ngx-mat-timepicker>
-    </div>
-  </div>
-  <div class="item heading">Токен</div>
-  <div class="item">
-    <mat-form-field>
-      <input type="password" matInput formControlName="token"/>
-    </mat-form-field>
-  </div>
+<form [formGroup]=form (submit)="saveForm()">
+  <mat-tab-group (selectedIndexChange)="onTabChange($event)">
+    <mat-tab label="Настройки плейлиста">
+      <playlist-settings formControlName="playlistSettings"></playlist-settings>
+    </mat-tab>
+    <mat-tab label="Настройки плеера" >
+      <player-settings formControlName="playerSettings"></player-settings>
+    </mat-tab>
+  </mat-tab-group>
 
-  <div class="item heading">Плейлист:</div>
-  <div class="item">
-    <div class="item_1-2 heading">
-      <div>Тип</div>
-      <div>Значение</div>
-      <div>Продолжительность (ms)</div>
-    </div>
+  <div class="playlist-footer">
+    <button
+      mat-stroked-button
+      *ngIf="isVisibleMediaButton"
+      type="button"
+      (click)="addPlaylistMedia()">
+      Добавить медиа объект
+    </button>
+    <button
+      mat-raised-button
+      color="primary"
+      class="save-button">
+      Сохранить и закрыть
+    </button>
   </div>
-
-  <ng-container formArrayName="media">
-    <ng-container *ngFor="let item of media.controls; index as i">
-      <playlist-item
-        class="item"
-        [formControlName]="i"
-        (deleteItem)="deleteItem(i)">
-      </playlist-item>
-    </ng-container>
-  </ng-container>
-
-  <button mat-raised-button color="primary" type="button" class="add-media" (click)="addMedia()"></button>
-  <button mat-raised-button color="primary" class="save-button wide">Сохранить и закрыть</button>
 </form>

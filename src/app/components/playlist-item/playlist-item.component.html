@@ -1,4 +1,13 @@
 <form [formGroup]="form">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+    <rect/>
+    <circle cx="92" cy="60" r="16"/>
+    <circle cx="164" cy="60" r="16"/>
+    <circle cx="92" cy="128" r="16"/>
+    <circle cx="164" cy="128" r="16"/>
+    <circle cx="92" cy="196" r="16"/>
+    <circle cx="164" cy="196" r="16"/>
+  </svg>
   <mat-form-field>
     <select matNativeControl formControlName="objectType">
       <option *ngFor="let itemType of playlistItemTypes" [value]="itemType.objType">{{itemType.title}}</option>
@@ -6,11 +15,11 @@
   </mat-form-field>
 
   <mat-form-field>
-    <input matInput placeholder="Значение" formControlName="objectValue" (click)="processValue()">
+    <input matInput formControlName="objectValue" (click)="processValue()">
   </mat-form-field>
 
-  <mat-form-field>
-    <input matInput placeholder="Время" formControlName="time">
+  <mat-form-field *ngIf="isVisibleTime">
+    <input matInput formControlName="time">
   </mat-form-field>
 
   <button type="button" class="icon-button trash-media" (click)="onDeleteItem()"></button>

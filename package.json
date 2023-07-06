@@ -1,6 +1,6 @@
 {
   "name": "iterra-player",
-  "version": "0.8.0",
+  "version": "1.0.0",
   "main": "electron-main.ts",
   "license": "MIT",
   "type": "module",
@@ -45,6 +45,8 @@
     "@angular/platform-browser-dynamic": "^16.1.0",
     "@angular/router": "^16.1.0",
     "@types/electron": "^1.6.10",
+    "angular-imask": "^7.1.0-alpha.0",
+    "bootstrap": "^5.3.0",
     "electron-updater": "^5.3.0",
     "ngx-mat-timepicker": "^16.0.2",
     "ngx-material-timepicker": "^13.1.0",

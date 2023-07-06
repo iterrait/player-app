@@ -1,0 +1,15 @@
+.player-settings {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+
+  .player-settings__item_1-2 {
+    display: flex;
+  }
+
+  .player-settings__item_1-2 mat-form-field {
+    flex: 1;
+    padding: 8px;
+  }
+}

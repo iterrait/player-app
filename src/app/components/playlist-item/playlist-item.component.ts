@@ -6,7 +6,6 @@ import {
   Component,
   EventEmitter,
   forwardRef,
-  OnDestroy,
   Output
 } from '@angular/core';
 import {
@@ -24,10 +23,11 @@ import { MatOptionModule } from '@angular/material/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { Subscription } from 'rxjs';
 
-import { IpcService } from '../../services/ipc-renderer.service';
-import { FileType, MediaType, PlayerMedia } from '../../types/player.types';
+import { BaseComponent } from '$directives/base.component';
+import { IpcService } from '$services/ipc-renderer.service';
+import { ObjectsService } from '$services/objects.service';
+import type { FileType, MediaType, PlayerMedia } from '$types/player.types';
 
 interface PlaylistItemType {
   title: string;
@@ -58,10 +58,9 @@ interface PlaylistItemType {
     }
   ]
 })
-export class PlaylistItemComponent implements AfterViewInit, ControlValueAccessor, OnDestroy {
+export class PlaylistItemComponent extends BaseComponent implements AfterViewInit, ControlValueAccessor {
   @Output() public deleteItem = new EventEmitter<void>();
 
-  private subscriptions: Subscription[] = [];
   protected form: FormGroup = this.formBuilder.group({
     objectType: [null],
     objectValue: [null],
@@ -69,6 +68,7 @@ export class PlaylistItemComponent implements AfterViewInit, ControlValueAccesso
   });
 
   private objectUuid: string | null = null;
+  protected isVisibleTime = true;
 
   protected onChangeFn: (val: any) => void = () => {};
   protected onTouchedFn: (val: any) => void = () => {};
@@ -86,25 +86,36 @@ export class PlaylistItemComponent implements AfterViewInit, ControlValueAccesso
     return this.form.get('objectValue') as FormControl;
   }
 
+  protected get time(): FormControl {
+    return this.form.get('time') as FormControl;
+  }
+
   constructor(
     private changeDetectorRef: ChangeDetectorRef,
     private formBuilder: FormBuilder,
     private ipcService: IpcService,
+    private objectsService: ObjectsService,
   ) {
-    this.subscriptions.push(
-      this.form.valueChanges
-        .subscribe({
-          next: () => {
-            this.onChangeFn(this.form.getRawValue());
-          }
-        })
-    );
+    super();
+
+    this.form.valueChanges
+      .pipe(this.takeUntilDestroy())
+      .subscribe({
+        next: () => {
+          this.onChangeFn(this.form.getRawValue());
+        }
+      });
   }
 
   public ngAfterViewInit(): void {
     this.ipcService.on('set-file', (event, args: FileType) => {
-      if (args.uuid === this.objectUuid) {
-        this.objectValue.setValue(args.filePaths[0].toString());
+      if (args.uuid === this.objectUuid && args.filePaths[0]) {
+        const path = args.filePaths[0].toString();
+
+        this.objectValue.setValue(path);
+        this.objectValue.enable();
+        this.isVisibleTime = this.objectsService.determineSingleObjectType(path) !== 'video';
+        this.changeDetectorRef.detectChanges();
       }
     });
   }
@@ -128,9 +139,14 @@ export class PlaylistItemComponent implements AfterViewInit, ControlValueAccesso
 
     this.form.patchValue({
       objectType: obj?.objectType ?? 'slot',
-      objectValue: obj?.objectValue,
+      objectValue: obj?.objectValue?.toString(),
       time: obj?.time,
     });
+
+    if (this.objectValue.value) {
+      this.isVisibleTime = this.objectsService.determineSingleObjectType(this.objectValue.value) !== 'video';
+    }
+
     this.changeDetectorRef.markForCheck();
   }
 
@@ -139,20 +155,12 @@ export class PlaylistItemComponent implements AfterViewInit, ControlValueAccesso
       return;
     }
 
+    this.objectValue.disable();
     this.objectUuid = uuid.v4();
     this.ipcService.send('open-dialog', { uuid: this.objectUuid } as any);
   }
 
   protected onDeleteItem(): void {
     this.deleteItem.emit();
-  }
-
-  public ngOnDestroy(): void {
-    if (this.subscriptions.length) {
-      this.subscriptions.forEach(
-        subscription => subscription.unsubscribe(),
-      );
-      this.subscriptions = [];
-    }
   }
 }

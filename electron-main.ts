@@ -1,9 +1,9 @@
-const { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu } = require('electron');
+const { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, net } = require('electron');
 const { autoUpdater } = require('electron-updater');
 
 const schedule = require('node-schedule');
 
-let configWindow, mainWindow;
+let aboutWindow, configWindow, mainWindow;
 let mainWindowOptions = {
   center: true,
   width: 1500,
@@ -16,7 +16,6 @@ let mainWindowOptions = {
   }
 };
 
-// Инициализация пользовательских данных
 const Store = require(`${__dirname}/core/store.ts`)
 const storeData = new Store({
   configName: 'user-preferences',
@@ -33,9 +32,6 @@ app.on('activate', function () {
   if (mainWindow === null) createWindow()
 })
 
-// При попытке создать новое окно, проверяется наличие основного окна,
-// если оно существует, то происходит его активация
-// если нет, то создается
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
@@ -63,7 +59,6 @@ if (!gotTheLock) {
   })
 }
 
-// Запись конфигурации в Store
 ipcMain.on('set-player-config', (event, args) => {
   storeData.set('config', args);
   setSchedule();
@@ -71,18 +66,18 @@ ipcMain.on('set-player-config', (event, args) => {
   app.exit();
 });
 
+ipcMain.on('get-app-version', function (event, arg) {
+  aboutWindow.webContents.send('sender-app-version', { version: app.getVersion() });
+});
+
 ipcMain.on('open-dialog', (event, args) => {
   dialog.showOpenDialog({
     properties: ['openFile'],
     filters: [
       {
-        name: 'Картинки',
-        extensions: ['jpg', 'png', 'giff']
+        name: 'Контент',
+        extensions: ['jpg', 'png', 'giff', 'mp4', 'avi', 'ogg'],
       },
-      {
-        name: 'Видео',
-        extensions: ['mp4', 'mov']
-      }
     ],
   })
     .then((data) => {
@@ -100,8 +95,8 @@ function createWindow() {
       label: "Настройки",
       click: () => {
         configWindow = new BrowserWindow({
-          width: 700,
-          height: 800,
+          width: 900,
+          height: 900,
           parent: mainWindow,
           title: 'Настройки',
           modal: true,
@@ -112,13 +107,12 @@ function createWindow() {
             contextIsolation: false
           }
         });
-
-        configWindow.loadURL(`file://${__dirname}/dist-electron/index.html#/settings`);
-
-        // Получение конфигурации из Store
         ipcMain.on('get-player-config', () => {
           configWindow.webContents.send('player-rotation-config', storeData.get('config'));
         });
+
+        configWindow.loadURL(`file://${__dirname}/dist-electron/index.html#/settings`);
+        configWindow.setMenu(null);
       },
     },
     {
@@ -126,6 +120,26 @@ function createWindow() {
       submenu: [
         { role: "toggledevtools" },
       ]
+    },
+    {
+      label: "О приложении",
+      click: () => {
+        aboutWindow = new BrowserWindow({
+          width: 550,
+          height: 700,
+          parent: mainWindow,
+          title: 'О приложении',
+          modal: true,
+          resizable: false,
+          icon: './build/icon.ico',
+          webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: false,
+          }
+        });
+        aboutWindow.loadURL(`file://${__dirname}/dist-electron/index.html#/about`);
+        aboutWindow.setMenu(null);
+      },
     },
   ];
 
@@ -135,18 +149,38 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null;
     configWindow = null;
+    aboutWindow = null;
   });
 }
 
-// Установка расписания плеера
-function setSchedule() {
+function sendNotify(status) {
   const playerConfig = storeData.get('config');
+  const data = [
+    `Номер плеера: ${playerConfig.playerSettings.playerNumber}%0A`,
+    `AnyDeskID: ${playerConfig.playerSettings.anydeskId}%0A`,
+    `Проект: ${playerConfig.playerSettings.project}%0A`,
+    `Организация: ${playerConfig.playerSettings.organization}%0A`,
+    `Адрес: ${playerConfig.playerSettings.address}%0A`,
+    `Ответственный: ${playerConfig.playerSettings.responsible}%0A`,
+    `Телефон: ${playerConfig.playerSettings.phone}%0A`,
+    `Статус:  ${status}`,
+  ];
 
-  if (!playerConfig.start || !playerConfig.end) {
+  const params = `chat_id=${playerConfig.playerSettings.telegramChatID}&text=${data.join('')}`;
+  const path = `https://api.telegram.org/bot${playerConfig.playerSettings.telegramBotToken}/sendMessage?${params}`;
+  const request = net.request(path);
+
+  request.end();
+}
+
+function setSchedule() {
+  const config = storeData.get('config');
+
+  if (!config.playlistSettings.start || !config.playlistSettings.end) {
     return;
   }
-  const playerStart = playerConfig.start.split(':');
-  const playerEnd = playerConfig.end.split(':');
+  const playerStart = config.playlistSettings.start.split(':');
+  const playerEnd = config.playlistSettings.end.split(':');
 
   let ruleStart = new schedule.RecurrenceRule();
   ruleStart.hour = Number(playerStart[0]) || 0;
@@ -166,25 +200,30 @@ function setSchedule() {
 
   if (isExistence && isCurrentStart && isCurrentEnd) {
     ipcMain.on('get-player-config', function (event, arg) {
-      mainWindow.webContents.send('player-rotation-config', playerConfig);
+      mainWindow.webContents.send('player-rotation-config', config);
     });
     checkForUpdate();
   } else {
     mainWindow.webContents.send('black-window', []);
   }
 
+  sendNotify('Запустился');
+
   schedule.scheduleJob(ruleStart, function () {
-    mainWindow.webContents.send('player-rotation-config', playerConfig);
+    mainWindow.webContents.send('player-rotation-config', config);
     checkForUpdate();
+    sendNotify('Проснулся');
   });
 
   schedule.scheduleJob(ruleEnd, function () {
     mainWindow.webContents.send('black-window', []);
+    sendNotify('Заснул');
   });
 }
 
 // При загрузке обновления происходит автоматическая установка
 autoUpdater.on('update-downloaded', () => {
+  sendNotify('Идет обновление');
   autoUpdater.quitAndInstall();
 });
 
