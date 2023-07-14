@@ -3,6 +3,7 @@ import { Post, SlotManifest, SlotWidgetConfigData } from './slot.types';
 export type MediaType = 'slot' | 'file';
 export type ProjectType = 'dosaaf' | 'vBaikale' | 'siberianСharacter' | 'iterra';
 export type SingleObjectType = 'image' | 'video';
+export type WidgetType = 'posting' | 'emoji';
 
 export interface PlayerSettings {
   playerNumber: string | null;

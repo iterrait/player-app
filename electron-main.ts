@@ -156,7 +156,7 @@ function createWindow() {
 function sendNotify(status) {
   const playerConfig = storeData.get('config');
   const data = [
-    `Номер плеера: ${playerConfig.playerSettings.playerNumber}%0A`,
+    `Номер плеера: %20%23player${playerConfig.playerSettings.playerNumber}%0A`,
     `AnyDeskID: ${playerConfig.playerSettings.anydeskId}%0A`,
     `Проект: ${playerConfig.playerSettings.project}%0A`,
     `Организация: ${playerConfig.playerSettings.organization}%0A`,
@@ -202,12 +202,12 @@ function setSchedule() {
     ipcMain.on('get-player-config', function (event, arg) {
       mainWindow.webContents.send('player-rotation-config', config);
     });
-    checkForUpdate();
   } else {
     mainWindow.webContents.send('black-window', []);
   }
 
   sendNotify('Запустился');
+  checkForUpdate();
 
   schedule.scheduleJob(ruleStart, function () {
     mainWindow.webContents.send('player-rotation-config', config);

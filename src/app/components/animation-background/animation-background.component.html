@@ -1,0 +1,34 @@
+<div
+  *ngIf="backgroundConfig"
+  class="background-overlay"
+  [style.width.px]="backgroundConfig.backgroundWidth || 0"
+  [style.height.px]="backgroundConfig.backgroundHeight || 0"
+  [style.top.px]="backgroundConfig.backgroundTop || 0"
+  [style.left.px]="backgroundConfig.backgroundLeft || 0"
+  [style.z-index]="backgroundConfig.backgroundLayer && backgroundConfig.backgroundLayer === 'front' ? '3' : '-1'">
+  <div
+    class="background-overlay__wrapper"
+    [class.background-overlay__wrapper--news]="backgroundConfig?.rubric === 'news'"
+    [class.background-overlay__wrapper--photo]="backgroundConfig?.rubric === 'photo'"
+    [class.background-overlay__wrapper--events]="backgroundConfig?.rubric === 'events'"
+    [class.background-overlay__wrapper--ads]="backgroundConfig?.rubric === 'ads'"
+    [class.background-overlay__wrapper--theme-day]="backgroundConfig?.rubric === 'theme-day'">
+    <div class="background-overlay__title-wrapper">
+      <div class="background-overlay__title">Telegram-канал</div>
+      <div
+        #channel
+        [style.fontSize]="fontSize+'px'"
+        class="background-overlay__channel">
+        @{{backgroundConfig?.backgroundAnimationChannel}}
+      </div>
+    </div>
+    <div
+      class="background-overlay__rubric"
+      [style.background-image]="'url(./assets/images/rubrics/'+backgroundConfig.rubric+'.svg)'">
+    </div>
+    <img [src]="backgroundConfig?.backgroundAnimationLogo" class="background-overlay__logo"/>
+    <img [src]="backgroundConfig?.backgroundAnimationQr" class="background-overlay__qr"/>
+    <img [src]="'./assets/images/arm.png'" class="background-overlay__arm"/>
+    <div class="background-overlay__text">Отправь сюда</div>
+  </div>
+</div>

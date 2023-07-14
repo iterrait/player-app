@@ -17,6 +17,7 @@ import { NgxMatTimepickerModule } from 'ngx-mat-timepicker';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
+import { AnimationBackgroundComponent } from './components/animation-background/animation-background.component';
 import { PlaylistItemComponent } from './components/playlist-item/playlist-item.component';
 import { SimpleBackgroundComponent } from './components/simple-background/simple-background.component';
 import { AboutComponent } from './pages/about/about.component';
@@ -35,6 +36,7 @@ import { PlaylistSettingsComponent } from './pages/settings/playlist-settings/pl
     SettingsComponent,
   ],
   imports: [
+    AnimationBackgroundComponent,
     AppRoutingModule,
     BrowserModule,
     BrowserAnimationsModule,

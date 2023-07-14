@@ -83,7 +83,7 @@ export class HomeComponent extends BaseComponent {
 
       if (this.playerConfig?.playerSettings.iterraToken) {
         forkJoin([
-          this.slotService.fetchSlotWidgets(slotIdIn, this.playerConfig.playerSettings.iterraToken),
+          this.slotService.fetchSlotWidgets(slotIdIn, 'posting', this.playerConfig.playerSettings.iterraToken),
           this.slotService.fetchSlotConfigs(slotIdIn, this.playerConfig.playerSettings.iterraToken)
         ])
           .subscribe({

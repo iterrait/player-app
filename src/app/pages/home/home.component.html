@@ -42,7 +42,14 @@
       </div>
     </div>
   </div>
-  <simple-background [backgroundConfig]="currentMedia.slotConfigData"></simple-background>
+  <simple-background
+    *ngIf="currentMedia.slotConfigData?.backgroundType !== 'animation'"
+    [backgroundConfig]="currentMedia.slotConfigData">
+  </simple-background>
+  <animation-background
+    *ngIf="currentMedia.slotConfigData?.backgroundType === 'animation'"
+    [backgroundConfig]="currentMedia.slotConfigData">
+  </animation-background>
   <canvas
     #postCanvas
     [style.width]="windowWidth"

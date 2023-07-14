@@ -54,8 +54,11 @@ export interface SlotWidgetConfigData {
   backgroundTop?: number;
   backgroundLeft?: number;
   backgroundLayer?: 'front' | 'back';
-  backgroundType?: 'image' | 'video';
+  backgroundType?: 'image' | 'video' | 'animation';
   backgroundPath?: string;
+  backgroundAnimationChannel?: string;
+  backgroundAnimationLogo?: string;
+  backgroundAnimationQr?: string;
 }
 
 export interface Post {

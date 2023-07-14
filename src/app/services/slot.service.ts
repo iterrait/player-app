@@ -3,6 +3,7 @@ import { Observable, of } from 'rxjs';
 
 import { ApiService } from '$services/api.service';
 import type { Post, SlotWidget, SlotWidgetConfig } from '$types/slot.types';
+import type { WidgetType } from '$types/player.types';
 
 @Injectable({
   providedIn: 'root',
@@ -13,7 +14,7 @@ export class SlotService {
   ) {
   }
 
-  public fetchSlotWidgets(slotIdIn: string, token: string): Observable<SlotWidget[]> {
+  public fetchSlotWidgets(slotIdIn: string, widget: WidgetType, token: string): Observable<SlotWidget[]> {
     if (!slotIdIn.length || !token) {
       return of([]);
     }
@@ -21,6 +22,7 @@ export class SlotService {
     const path = 'https://api.iterra.world/v1/capsule/location/slots/widgets';
     const params = {
       slotIdIn,
+      widget,
       isActive: true,
       limit: 0,
     };
