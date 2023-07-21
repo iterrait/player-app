@@ -204,7 +204,8 @@ export class HomeComponent extends BaseComponent {
 
       if (this.marqueeTextElement?.nativeElement) {
         setTimeout(() => {
-          this.isElementScrolling = this.marqueeTextElement?.nativeElement?.scrollWidth >= this.marqueeTextElement?.nativeElement?.clientWidth;
+           this.isElementScrolling =
+            this.marqueeTextElement?.nativeElement?.scrollWidth > this.marqueeTextElement?.nativeElement?.clientWidth;
         })
       }
     }
