@@ -158,6 +158,7 @@ function sendNotify(status) {
   const data = [
     `Номер плеера: %20%23player${playerConfig.playerSettings.playerNumber}%0A`,
     `AnyDeskID: ${playerConfig.playerSettings.anydeskId}%0A`,
+    `Версия плеера: ${app.getVersion()}%0A`,
     `Проект: ${playerConfig.playerSettings.project}%0A`,
     `Организация: ${playerConfig.playerSettings.organization}%0A`,
     `Адрес: ${playerConfig.playerSettings.address}%0A`,
