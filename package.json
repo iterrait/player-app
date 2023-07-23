@@ -1,6 +1,6 @@
 {
   "name": "iterra-player",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "main": "electron-main.ts",
   "license": "MIT",
   "type": "module",

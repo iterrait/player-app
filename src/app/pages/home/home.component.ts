@@ -187,31 +187,32 @@ export class HomeComponent extends BaseComponent {
 
     const postIndex = this.currentSlotsIndex[this.currentMedia.slotId!];
     const slotPosts = this.playlist[this.mediaIndex].slotPosts || [];
-
     const blocks = slotPosts[postIndex]?.data?.blocks || [];
-    const rubric = this.playlist[this.mediaIndex]!.slotConfigData?.rubric || 'default';
-
-    const textBlock = blocks.find((item: Record<string, any>) => item['type'] === 'paragraph');
-    this.imageBlock = {};
-    this.videoBlock = {};
 
     this.imageBlock = blocks.find((item: Record<string, any>) => item['type'] === 'carousel');
     this.videoBlock = blocks.find((item: Record<string, any>) => item['type'] === 'video');
+
+    this.changeDetectorRef.detectChanges();
+
+    this.checkMarquee(blocks);
+    this.goToNextPost();
+  }
+
+  protected checkMarquee(blocks: any): void {
+    const rubric = this.playlist[this.mediaIndex]!.slotConfigData?.rubric || 'default';
+    const textBlock = blocks.find((item: Record<string, any>) => item['type'] === 'paragraph');
 
     if (this.playlist[this.mediaIndex].slotConfigData?.marquee) {
       const messageType = rubric === 'events' ? this.eventText : this.messageText;
       this.marqueeText = textBlock ? textBlock.data.text.substring(0, textBlock.data.text.indexOf(messageType)) : '';
 
       if (this.marqueeTextElement?.nativeElement) {
-        setTimeout(() => {
-           this.isElementScrolling =
-            this.marqueeTextElement?.nativeElement?.scrollWidth > this.marqueeTextElement?.nativeElement?.clientWidth;
-        })
+        this.isElementScrolling =
+          this.marqueeTextElement?.nativeElement?.scrollWidth >= this.marqueeTextElement?.nativeElement?.clientWidth;
       }
     }
 
     this.changeDetectorRef.detectChanges();
-    this.goToNextPost();
   }
 
   protected loadedSingleData(event: Event, singleVideo: HTMLVideoElement): void {

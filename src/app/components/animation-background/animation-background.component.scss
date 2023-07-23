@@ -2,7 +2,6 @@
   position: absolute;
   padding: 0;
   margin: 0;
-  font-family: 'Gilgroy', sans-serif;
   z-index: 1;
 }
 
@@ -26,13 +25,13 @@
   position: relative;
   top: 0;
   margin: 0 auto;
-  padding-top: 12px;
+  padding-top: 32px;
   padding-bottom: 32px;
   height: 24%;
   min-height: 24%;
   max-height: 24%;
   object-fit: contain;
-  animation: logo 7s infinite;
+  animation: logo 10s infinite;
 }
 
 .background-overlay__qr {
@@ -50,7 +49,7 @@
 
 .background-overlay__qr,
 .background-overlay__text {
-  animation: element-out 7s infinite forwards;
+  animation: element-out 10s infinite forwards;
 }
 
 .background-overlay__arm-out {
@@ -58,12 +57,13 @@
   left: 50%;
   transform: translate(-50%, 0);
   height: 80px;
-  animation: move .7s infinite;
+  animation: move 1s infinite;
 }
 
 .background-overlay__arm {
   object-fit: contain;
-  animation: element-out 7s infinite;
+  height: 100%;
+  animation: element-out 10s infinite;
 }
 
 .background-overlay__title-wrapper {
@@ -84,12 +84,13 @@
   width: 100%;
   padding: 0 12px;
   letter-spacing: 4px;
-  animation: element-in 7s infinite forwards;
+  animation: element-in 10s infinite forwards;
 }
 
 .background-overlay__title {
   padding-bottom: 24px;
   font-size: 38px;
+  font-weight: 500;
 }
 
 .background-overlay__channel {
@@ -196,11 +197,14 @@
 }
 
 @keyframes move {
-  from {
-    top: 68%;
+  0% {
+    top: 73%;
   }
-  to {
-    top: 70%;
+  50% {
+    top: 71%;
+  }
+  100% {
+    top: 73%;
   }
 }
 
