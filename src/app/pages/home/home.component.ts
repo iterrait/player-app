@@ -181,7 +181,8 @@ export class HomeComponent extends BaseComponent {
   }
 
   protected addPost(): void {
-    if (!this.playlist[this.mediaIndex].slotPosts || !this.currentMedia) {
+    if (!this.playlist[this.mediaIndex].slotPosts?.length || !this.currentMedia) {
+      this.showMediaObject();
       return;
     }
 

@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { Observable, of, retry } from 'rxjs';
 
 import { ApiService } from '$services/api.service';
 import type { Post, SlotWidget, SlotWidgetConfig } from '$types/slot.types';
@@ -9,6 +10,9 @@ import type { WidgetType } from '$types/player.types';
   providedIn: 'root',
 })
 export class SlotService {
+  private retryCount = 10;
+  private retryDelay = 10000;
+
   constructor(
     private apiService: ApiService
   ) {
@@ -33,7 +37,10 @@ export class SlotService {
       }
     };
 
-    return this.apiService.get<SlotWidget[]>(path, params, options);
+    return this.apiService.get<SlotWidget[]>(path, params, options).pipe(
+      retry({ count: this.retryCount, delay: this.retryDelay }),
+      catchError(() => of([])),
+    );
   }
 
   public fetchSlotConfigs(slotIdIn: string | number, token: string): Observable<SlotWidgetConfig[]> {
@@ -55,14 +62,19 @@ export class SlotService {
       }
     };
 
-    return this.apiService.get<SlotWidgetConfig[]>(path, params, options);
+    return this.apiService.get<SlotWidgetConfig[]>(path, params, options).pipe(
+      retry({ count: this.retryCount, delay: this.retryDelay }),
+      catchError(() => of([])),
+    );
   }
 
   public moveCounter(slotId: number, token: string): Observable<void> {
     const path = `https://widget.iterra.world/posting/slots/${slotId}/post`;
     const params = { slotId, token };
 
-    return this.apiService.get<void>(path, params);
+    return this.apiService.get<void>(path, params).pipe(
+      retry({ count: this.retryCount, delay: this.retryDelay }),
+    );
   }
 
   public getPosts(items: number[], token: string): Observable<Post[]> {
@@ -82,6 +94,10 @@ export class SlotService {
         'Content-Type': 'application/json',
       }
     };
-    return this.apiService.get<Post[]>(path, {}, options);
+
+    return this.apiService.get<Post[]>(path, {}, options).pipe(
+      retry({ count: this.retryCount, delay: this.retryDelay }),
+      catchError(() => of([]))
+    );
   }
 }
