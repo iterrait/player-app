@@ -102,8 +102,16 @@ export class HomeComponent extends BaseComponent {
                       object.slotId = slotId;
                       object.slotManifest = slotWidgets
                         .find((slotWidget) => slotWidget.slotId === slotId)?.manifest || null;
-                      object.slotConfigData = slotWidgetConfigs
+
+                      const slotConfigData = slotWidgetConfigs
                         .find((slotWidgetConfig) => slotWidgetConfig.slotId === slotId)?.data || null;
+
+                      if (slotConfigData && !slotConfigData.hasOwnProperty('backgroundDisplayFinger')) {
+                        slotConfigData.backgroundDisplayFinger = true;
+                      }
+
+                      object.slotConfigData = slotConfigData;
+
                       this.currentSlotsIndex[slotId] = 0;
                       break;
                     case 'file':

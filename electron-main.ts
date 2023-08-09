@@ -208,11 +208,11 @@ function setSchedule() {
   }
 
   sendNotify('Запустился');
-  checkForUpdate();
+  checkForUpdate().then(() => {});
 
   schedule.scheduleJob(ruleStart, function () {
     mainWindow.webContents.send('player-rotation-config', config);
-    checkForUpdate();
+    checkForUpdate().then(() => {});
     sendNotify('Проснулся');
   });
 
@@ -228,8 +228,15 @@ autoUpdater.on('update-downloaded', () => {
   autoUpdater.quitAndInstall();
 });
 
-function checkForUpdate() {
-  setTimeout(() => {
-    autoUpdater.checkForUpdates();
-  }, 10000);
+async function checkForUpdate() {
+  try {
+    const updateCheckResult = await autoUpdater.checkForUpdates();
+    if (updateCheckResult.downloadPromise) {
+      updateCheckResult.downloadPromise.catch(error => {
+        console.error('Error while downloading the update: ', error);
+      });
+    }
+  } catch (error) {
+    console.error('Error while on checkForUpdates: ', error);
+  }
 }
