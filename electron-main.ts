@@ -4,6 +4,7 @@ const { autoUpdater } = require('electron-updater');
 const schedule = require('node-schedule');
 
 let aboutWindow, configWindow, mainWindow;
+let ruleStart, ruleEnd;
 let mainWindowOptions = {
   center: true,
   width: 1500,
@@ -29,7 +30,7 @@ app.on('window-all-closed', function () {
 })
 
 app.on('activate', function () {
-  if (mainWindow === null) createWindow()
+  if (!mainWindow) createWindow();
 })
 
 const gotTheLock = app.requestSingleInstanceLock();
@@ -47,11 +48,8 @@ if (!gotTheLock) {
 
   app.on('ready', () => {
     createWindow();
-    setSchedule();
-
-    setTimeout(() => {
-      autoUpdater.checkForUpdates().then(() => {});
-    }, 10000);
+    sendNotify('Запустился');
+    checkForUpdate(mainWindow);
 
     globalShortcut.register('Escape', function () {
       app.quit();
@@ -61,7 +59,6 @@ if (!gotTheLock) {
 
 ipcMain.on('set-player-config', (event, args) => {
   storeData.set('config', args);
-  setSchedule();
   app.relaunch();
   app.exit();
 });
@@ -86,6 +83,24 @@ ipcMain.on('open-dialog', (event, args) => {
     .catch((error) => console.log('error file', error));
 });
 
+ipcMain.on('get-player-config', function (event, arg) {
+  getPlayerConfig();
+});
+
+ipcMain.on('connection-restored', function (event, arg) {
+  sendNotify('Соединение восстановлено');
+});
+
+ipcMain.on('get-settings', function (event, arg) {
+  configWindow.webContents.send('set-settings', storeData.get('config'));
+});
+
+// При загрузке обновления происходит автоматическая установка
+autoUpdater.on('update-downloaded', () => {
+  sendNotify('Идет обновление');
+  autoUpdater.quitAndInstall();
+});
+
 function createWindow() {
   mainWindow = new BrowserWindow(mainWindowOptions);
   mainWindow.loadURL(`file://${__dirname}/dist-electron/index.html`);
@@ -107,11 +122,8 @@ function createWindow() {
             contextIsolation: false
           }
         });
-        ipcMain.on('get-player-config', () => {
-          configWindow.webContents.send('player-rotation-config', storeData.get('config'));
-        });
-
-        configWindow.loadURL(`file://${__dirname}/dist-electron/index.html#/settings`);
+        configWindow.webContents.send('player-rotation-config', storeData.get('config'))
+        configWindow.loadURL(`file://${__dirname}/dist-electron/index.html#/settings`)
         configWindow.setMenu(null);
       },
     },
@@ -169,12 +181,23 @@ function sendNotify(status) {
 
   const params = `chat_id=${playerConfig.playerSettings.telegramChatID}&text=${data.join('')}`;
   const path = `https://api.telegram.org/bot${playerConfig.playerSettings.telegramBotToken}/sendMessage?${params}`;
+
   const request = net.request(path);
+
+  request.on('error', (error) => {
+    mainWindow.webContents.send('black-window', error);
+  });
 
   request.end();
 }
 
-function setSchedule() {
+function checkForUpdate(mainWindow) {
+  autoUpdater.checkForUpdates().catch((error) => {
+    mainWindow.webContents.send('black-window', error);
+  });
+}
+
+function getPlayerConfig() {
   const config = storeData.get('config');
 
   if (!config.playlistSettings.start || !config.playlistSettings.end) {
@@ -183,11 +206,11 @@ function setSchedule() {
   const playerStart = config.playlistSettings.start.split(':');
   const playerEnd = config.playlistSettings.end.split(':');
 
-  let ruleStart = new schedule.RecurrenceRule();
+  ruleStart = new schedule.RecurrenceRule();
   ruleStart.hour = Number(playerStart[0]) || 0;
   ruleStart.minute = Number(playerStart[1]) || 0;
 
-  let ruleEnd = new schedule.RecurrenceRule();
+  ruleEnd = new schedule.RecurrenceRule();
   ruleEnd.hour = Number(playerEnd[0]) || 0;
   ruleEnd.minute = Number(playerEnd[1]) || 0;
 
@@ -199,44 +222,27 @@ function setSchedule() {
   const isCurrentStart = currentHour > ruleStart.hour || (currentHour === ruleStart.hour && currentMinutes > ruleStart.minute);
   const isCurrentEnd = currentHour < ruleEnd.hour || (currentHour === ruleEnd.hour && currentMinutes < ruleEnd.minute);
 
+  setSchedule(ruleStart, ruleEnd);
+
   if (isExistence && isCurrentStart && isCurrentEnd) {
-    ipcMain.on('get-player-config', function (event, arg) {
-      mainWindow.webContents.send('player-rotation-config', config);
-    });
-  } else {
-    mainWindow.webContents.send('black-window', []);
-  }
-
-  sendNotify('Запустился');
-  checkForUpdate().then(() => {});
-
-  schedule.scheduleJob(ruleStart, function () {
     mainWindow.webContents.send('player-rotation-config', config);
-    checkForUpdate().then(() => {});
+  } else {
+    mainWindow.webContents.send('black-window', 'sleep');
+  }
+}
+
+function setSchedule(ruleStart, ruleEnd) {
+  schedule.scheduleJob(ruleStart, function () {
+    checkForUpdate(mainWindow);
+
+    const config = storeData.get('config');
+    mainWindow.webContents.send('player-rotation-config', config);
     sendNotify('Проснулся');
   });
 
   schedule.scheduleJob(ruleEnd, function () {
-    mainWindow.webContents.send('black-window', []);
+    checkForUpdate(mainWindow);
+    mainWindow.webContents.send('black-window', 'sleep');
     sendNotify('Заснул');
   });
-}
-
-// При загрузке обновления происходит автоматическая установка
-autoUpdater.on('update-downloaded', () => {
-  sendNotify('Идет обновление');
-  autoUpdater.quitAndInstall();
-});
-
-async function checkForUpdate() {
-  try {
-    const updateCheckResult = await autoUpdater.checkForUpdates();
-    if (updateCheckResult.downloadPromise) {
-      updateCheckResult.downloadPromise.catch(error => {
-        console.error('Error while downloading the update: ', error);
-      });
-    }
-  } catch (error) {
-    console.error('Error while on checkForUpdates: ', error);
-  }
 }

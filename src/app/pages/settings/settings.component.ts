@@ -27,9 +27,9 @@ export class SettingsComponent implements AfterViewInit {
   }
 
   public ngAfterViewInit(): void {
-    this.ipcService.send('get-player-config');
+    this.ipcService.send('get-settings');
 
-    this.ipcService.on('player-rotation-config', (event, config) => {
+    this.ipcService.on('set-settings', (event, config) => {
       this.setFormData(config);
     });
   }

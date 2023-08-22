@@ -1,92 +1,97 @@
 <ng-container *ngIf="!currentMedia">
-  <div class="sleep-block"></div>
+  <div class="sleep-block">
+    <div *ngIf="!isHomeOnline" class="no-connect">
+      <div>Нет соединения с интернетом</div>
+    </div>
+  </div>
 </ng-container>
 
-<ng-container *ngIf="currentMedia && currentMedia.type === 'slot'">
-  <div class="wrapper-post"
-       #wrapperPost
-       [style.width.px]="currentMedia.slotManifest?.size?.width || 0"
-       [style.height.px]="currentMedia.slotManifest?.size?.height || 0"
-       [style.top.px]="currentMedia.slotManifest?.position?.top || 0"
-       [style.left.px]="currentMedia.slotManifest?.position?.left || 0">
+<ng-container *ngIf="currentMedia">
+  <ng-container *ngIf="currentMedia.type === 'slot'">
+    <div class="wrapper-post"
+         #wrapperPost
+         [style.width.px]="currentMedia.slotManifest?.size?.width || 0"
+         [style.height.px]="currentMedia.slotManifest?.size?.height || 0"
+         [style.top.px]="currentMedia.slotManifest?.position?.top || 0"
+         [style.left.px]="currentMedia.slotManifest?.position?.left || 0">
+      <img
+        #postImage
+        *ngIf="imageBlock"
+        [src]="imageBlock['data'].carousel[0]"
+        [class.fit_into_screen]="currentMedia.slotConfigData?.fitIntoScreen || false"
+        class="post-image"
+        (load)="onLoadPostImage()"/>
+      <video
+        #postVideo
+        *ngIf="videoBlock"
+        [src]="videoBlock['data'].src"
+        [class.fit_into_screen]="currentMedia.slotConfigData?.fitIntoScreen || false"
+        autoplay
+        muted
+        loop
+        (loadeddata)="onLoadPostVideo()">
+      </video>
+      <div
+        #marquee
+        *ngIf="currentMedia.slotConfigData?.marquee"
+        class="marquee"
+        [class.marquee__news]="currentMedia.slotConfigData?.rubric === 'news'"
+        [class.marquee__photo]="currentMedia.slotConfigData?.rubric === 'photo'"
+        [class.marquee__events]="currentMedia.slotConfigData?.rubric === 'events'"
+        [class.marquee__ads]="currentMedia.slotConfigData?.rubric === 'ads'"
+        [class.marquee__theme-day]="currentMedia.slotConfigData?.rubric === 'theme-day'">
+        <div
+          #marqueeTextElement
+          [class.marquee__animation-text]="isElementScrolling">
+          {{marqueeText}}
+        </div>
+      </div>
+    </div>
+    <simple-background
+      *ngIf="currentMedia.slotConfigData?.backgroundType !== 'animation'"
+      [backgroundConfig]="currentMedia.slotConfigData">
+    </simple-background>
+    <animation-background
+      *ngIf="currentMedia.slotConfigData?.backgroundType === 'animation'"
+      [backgroundConfig]="currentMedia.slotConfigData">
+    </animation-background>
+    <canvas
+      #postCanvas
+      [style.width]="windowWidth"
+      [style.height]="windowHeight"
+      class="post-background">
+    </canvas>
+  </ng-container>
+  <ng-container *ngIf="currentMedia.singleObjectType">
     <img
-      #postImage
-      *ngIf="imageBlock"
-      [src]="imageBlock['data'].carousel[0]"
-      [class.fit_into_screen]="currentMedia.slotConfigData?.fitIntoScreen || false"
-      class="post-image"
-      (load)="onLoadPostImage()"/>
+      *ngIf="currentMedia.singleObjectType === 'image'"
+      class="full-wide-object"
+      [src]="currentMedia.singleMediaPath"
+    />
     <video
-      #postVideo
-      *ngIf="videoBlock"
-      [src]="videoBlock['data'].src"
-      [class.fit_into_screen]="currentMedia.slotConfigData?.fitIntoScreen || false"
+      *ngIf="currentMedia.singleObjectType === 'video'"
+      #singleVideo
+      class="full-wide-object"
+      [src]="currentMedia.singleMediaPath"
       autoplay
       muted
       loop
-      (loadeddata)="onLoadPostVideo()">
+      (loadedmetadata)="loadedSingleData($event, singleVideo)">
+      <source
+        *ngIf="currentMedia.singleObjectExtension === 'mp4'"
+        [src]="currentMedia.singleMediaPath"
+        type="video/mp4"
+      />
+      <source
+        *ngIf="currentMedia.singleObjectExtension === 'ogg'"
+        [src]="currentMedia.singleMediaPath"
+        type="video/ogg"
+      />
+      <source
+        *ngIf="currentMedia.singleObjectExtension === 'avi'"
+        [src]="currentMedia.singleMediaPath"
+        type="video/avi"
+      />
     </video>
-    <div
-      #marquee
-      *ngIf="currentMedia.slotConfigData?.marquee"
-      class="marquee"
-      [class.marquee__news]="currentMedia.slotConfigData?.rubric === 'news'"
-      [class.marquee__photo]="currentMedia.slotConfigData?.rubric === 'photo'"
-      [class.marquee__events]="currentMedia.slotConfigData?.rubric === 'events'"
-      [class.marquee__ads]="currentMedia.slotConfigData?.rubric === 'ads'"
-      [class.marquee__theme-day]="currentMedia.slotConfigData?.rubric === 'theme-day'">
-      <div
-        #marqueeTextElement
-        [class.marquee__animation-text]="isElementScrolling">
-        {{marqueeText}}
-      </div>
-    </div>
-  </div>
-  <simple-background
-    *ngIf="currentMedia.slotConfigData?.backgroundType !== 'animation'"
-    [backgroundConfig]="currentMedia.slotConfigData">
-  </simple-background>
-  <animation-background
-    *ngIf="currentMedia.slotConfigData?.backgroundType === 'animation'"
-    [backgroundConfig]="currentMedia.slotConfigData">
-  </animation-background>
-  <canvas
-    #postCanvas
-    [style.width]="windowWidth"
-    [style.height]="windowHeight"
-    class="post-background">
-  </canvas>
-</ng-container>
-
-<ng-container *ngIf="currentMedia && currentMedia.singleObjectType">
-  <img
-    *ngIf="currentMedia.singleObjectType === 'image'"
-    class="full-wide-object"
-    [src]="currentMedia.singleMediaPath"
-  />
-  <video
-    *ngIf="currentMedia.singleObjectType === 'video'"
-    #singleVideo
-    class="full-wide-object"
-    [src]="currentMedia.singleMediaPath"
-    autoplay
-    muted
-    loop
-    (loadedmetadata)="loadedSingleData($event, singleVideo)">
-    <source
-      *ngIf="currentMedia.singleObjectExtension === 'mp4'"
-      [src]="currentMedia.singleMediaPath"
-      type="video/mp4"
-    />
-    <source
-      *ngIf="currentMedia.singleObjectExtension === 'ogg'"
-      [src]="currentMedia.singleMediaPath"
-      type="video/ogg"
-    />
-    <source
-      *ngIf="currentMedia.singleObjectExtension === 'avi'"
-      [src]="currentMedia.singleMediaPath"
-      type="video/avi"
-    />
-  </video>
+  </ng-container>
 </ng-container>

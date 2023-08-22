@@ -1,5 +1,20 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, ViewChild } from '@angular/core';
-import { forkJoin } from 'rxjs';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  ElementRef,
+  ViewChild,
+} from '@angular/core';
+import {
+  BehaviorSubject,
+  combineLatest,
+  forkJoin,
+  fromEvent,
+  Observable,
+  shareReplay,
+  startWith,
+} from 'rxjs';
+import { map } from 'rxjs/operators';
 
 import { BaseComponent } from '$directives/base.component';
 import { IpcService} from '$services/ipc-renderer.service';
@@ -50,6 +65,9 @@ export class HomeComponent extends BaseComponent {
   protected currentSlotsIndex: Record<number, number> = {};
   protected isElementScrolling = false;
 
+  protected isHomeOnline$: Observable<boolean> = new BehaviorSubject<boolean>(true);
+  protected isHomeOnline = true;
+
   constructor(
     private changeDetectorRef: ChangeDetectorRef,
     private ipcService: IpcService,
@@ -58,82 +76,118 @@ export class HomeComponent extends BaseComponent {
   ) {
     super();
 
-    this.getPLayerConfig();
-
     this.windowHeight = window.innerHeight;
     this.windowWidth = window.innerWidth;
 
-    this.ipcService.on('black-window', () => {
-      this.clearTimeouts();
-      this.currentMedia = null;
+    this.subscribeToOnline();
 
-      this.changeDetectorRef.detectChanges();
+    this.ipcService.on('black-window', (event, data) => {
+      console.log('black-window', data);
+      this.clearMedia();
+    });
+
+    this.ipcService.on('player-rotation-config', (event, config) => {
+      this.setPlayerConfig(config);
     });
   }
 
-  protected getPLayerConfig(): void {
-    this.ipcService.send('get-player-config');
+  protected clearMedia():void{
+    this.clearTimeouts();
+    this.currentMedia = null;
+    this.changeDetectorRef.detectChanges();
+  }
 
-    this.ipcService.on('player-rotation-config', (event, config) => {
-      this.playerConfig = config;
+  protected subscribeToOnline(): void {
+    this.isHomeOnline$ = combineLatest([
+      fromEvent(window, 'online').pipe(startWith(null)),
+      fromEvent(window, 'offline').pipe(startWith(null)),
+    ]).pipe(
+      map(() => navigator.onLine),
+      shareReplay(),
+    );
 
-      const mediaSlots: PlayerMedia[] = config.playlistSettings.media
-        .filter((item: PlayerMedia) => item.objectType === 'slot');
-      const slotIdIn = mediaSlots.map((item) => item.objectValue).join(',');
+    this.isHomeOnline$
+      .pipe(this.takeUntilDestroy())
+      .subscribe({
+        next: (isOnline) => {
+          console.log('isOnline', isOnline);
+          this.clearTimeouts();
+          this.currentMedia = null;
 
-      if (this.playerConfig?.playerSettings.iterraToken) {
-        forkJoin([
-          this.slotService.fetchSlotWidgets(slotIdIn, 'posting', this.playerConfig.playerSettings.iterraToken),
-          this.slotService.fetchSlotConfigs(slotIdIn, this.playerConfig.playerSettings.iterraToken)
-        ])
-          .subscribe({
-              next: ([slotWidgets, slotWidgetConfigs]) => {
-                this.playlist = [];
+          if (isOnline) {
+            this.ipcService.send('get-player-config');
 
-                this.playerConfig?.playlistSettings.media.forEach((item) => {
-                  const object: PlaylistMedia = {
-                    type: item.objectType,
-                  };
-
-                  switch (item.objectType) {
-                    case 'slot':
-                      const slotId = Number(item.objectValue);
-
-                      object.slotId = slotId;
-                      object.slotManifest = slotWidgets
-                        .find((slotWidget) => slotWidget.slotId === slotId)?.manifest || null;
-
-                      const slotConfigData = slotWidgetConfigs
-                        .find((slotWidgetConfig) => slotWidgetConfig.slotId === slotId)?.data || null;
-
-                      if (slotConfigData && !slotConfigData.hasOwnProperty('backgroundDisplayFinger')) {
-                        slotConfigData.backgroundDisplayFinger = true;
-                      }
-
-                      object.slotConfigData = slotConfigData;
-
-                      this.currentSlotsIndex[slotId] = 0;
-                      break;
-                    case 'file':
-                      object.singleMediaPath = String(item.objectValue);
-                      break;
-                  }
-
-                  this.playlist.push(object);
-                });
-
-                this.showMediaObject();
-              },
-              error: (error) => console.log('error', error)
+            if (!this.isHomeOnline) {
+              this.ipcService.send('connection-restored');
             }
-          );
-      }
-    });
+          }
+
+          this.isHomeOnline = isOnline;
+          this.changeDetectorRef.markForCheck();
+        }
+      });
+  }
+
+  protected setPlayerConfig(config: PlayerConfig): void {
+    this.playerConfig = config;
+
+    const mediaSlots: PlayerMedia[] = config.playlistSettings.media
+      .filter((item: PlayerMedia) => item.objectType === 'slot');
+    const slotIdIn = mediaSlots.map((item) => item.objectValue).join(',');
+
+    if (this.playerConfig?.playerSettings.iterraToken) {
+      forkJoin([
+        this.slotService.fetchSlotWidgets(slotIdIn, 'posting', this.playerConfig.playerSettings.iterraToken),
+        this.slotService.fetchSlotConfigs(slotIdIn, this.playerConfig.playerSettings.iterraToken)
+      ])
+        .pipe(this.takeUntilDestroy())
+        .subscribe({
+            next: ([slotWidgets, slotWidgetConfigs]) => {
+              this.playlist = [];
+
+              this.playerConfig?.playlistSettings.media.forEach((item) => {
+                const object: PlaylistMedia = {
+                  type: item.objectType,
+                };
+
+                switch (item.objectType) {
+                  case 'slot':
+                    const slotId = Number(item.objectValue);
+
+                    object.slotId = slotId;
+                    object.slotManifest = slotWidgets
+                      .find((slotWidget) => slotWidget.slotId === slotId)?.manifest || null;
+
+                    const slotConfigData = slotWidgetConfigs
+                      .find((slotWidgetConfig) => slotWidgetConfig.slotId === slotId)?.data || null;
+
+                    if (slotConfigData && !slotConfigData.hasOwnProperty('backgroundDisplayFinger')) {
+                      slotConfigData.backgroundDisplayFinger = true;
+                    }
+
+                    object.slotConfigData = slotConfigData;
+
+                    this.currentSlotsIndex[slotId] = 0;
+                    break;
+                  case 'file':
+                    object.singleMediaPath = String(item.objectValue);
+                    break;
+                }
+
+                this.playlist.push(object);
+              });
+
+              this.showMediaObject();
+            },
+            error: (error) => console.log('error', error)
+          }
+        );
+    }
   }
 
   protected showMediaObject(): void {
-    this.currentMedia = this.playlist[this.mediaIndex];
     this.clearTimeouts();
+    this.currentMedia = this.playlist[this.mediaIndex];
 
     switch (this.playlist[this.mediaIndex].type) {
       case 'slot':
@@ -177,15 +231,17 @@ export class HomeComponent extends BaseComponent {
       return;
     }
 
-    this.slotService.getPosts(postIds, this.playerConfig?.playerSettings.iterraToken!).subscribe({
-      next: (posts) => {
-        posts.sort((a, b) => a.id - b.id);
-        this.playlist[this.mediaIndex].slotPosts = posts;
-        this.addPost();
-        this.getNextShowMediaObject(this.playerConfig?.playlistSettings.media[this.mediaIndex].time || 0);
-      },
-      error: (error) => console.log('error', error)
-    })
+    this.slotService.getPosts(postIds, this.playerConfig?.playerSettings.iterraToken!)
+      .pipe(this.takeUntilDestroy())
+      .subscribe({
+        next: (posts) => {
+          posts.sort((a, b) => a.id - b.id);
+          this.playlist[this.mediaIndex].slotPosts = posts;
+          this.addPost();
+          this.getNextShowMediaObject(this.playerConfig?.playlistSettings.media[this.mediaIndex].time || 0);
+        },
+        error: (error) => console.log('error', error)
+      })
   }
 
   protected addPost(): void {
