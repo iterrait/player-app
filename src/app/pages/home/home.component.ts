@@ -1,43 +1,24 @@
-import {
-  ChangeDetectionStrategy,
-  ChangeDetectorRef,
-  Component,
-  ElementRef,
-  ViewChild,
-} from '@angular/core';
-import {
-  BehaviorSubject,
-  combineLatest,
-  forkJoin,
-  fromEvent,
-  Observable,
-  shareReplay,
-  startWith,
-} from 'rxjs';
+import { ChangeDetectorRef, Component, ElementRef, ViewChild } from '@angular/core';
+import { BehaviorSubject, combineLatest, forkJoin, fromEvent, Observable, shareReplay, startWith } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 import { BaseComponent } from '$directives/base.component';
-import { IpcService} from '$services/ipc-renderer.service';
-import { SlotService} from '$services/slot.service';
-import {
-  PlayerConfig,
-  PlayerMedia,
-  PlaylistMedia,
-} from '$types/player.types';
+import { IpcService } from '$services/ipc-renderer.service';
+import { SlotService } from '$services/slot.service';
+import { PlayerConfig, PlayerMedia, PlaylistMedia } from '$types/player.types';
 import { ObjectsService } from '$services/objects.service';
 
 @Component({
   selector: 'home',
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomeComponent extends BaseComponent {
   @ViewChild('wrapperPost') public wrapperPost!: ElementRef<HTMLElement>;
   @ViewChild('postCanvas') public postCanvas!: ElementRef<HTMLCanvasElement>;
 
   @ViewChild('marquee') public marquee!: ElementRef<HTMLElement>;
-  @ViewChild('marqueeTextElement') public marqueeTextElement!: ElementRef<HTMLElement>;
+  @ViewChild('marqueeTextElement') public marqueeTextElement!: ElementRef<HTMLDivElement>;
 
   @ViewChild('postImage') public postImage!: ElementRef<HTMLImageElement>;
   @ViewChild('postVideo') public postVideo!: ElementRef<HTMLVideoElement>;
@@ -67,6 +48,7 @@ export class HomeComponent extends BaseComponent {
 
   protected isHomeOnline$: Observable<boolean> = new BehaviorSubject<boolean>(true);
   protected isHomeOnline = true;
+  protected slotIdIn: string | null = null;
 
   constructor(
     private changeDetectorRef: ChangeDetectorRef,
@@ -89,9 +71,11 @@ export class HomeComponent extends BaseComponent {
     this.ipcService.on('player-rotation-config', (event, config) => {
       this.setPlayerConfig(config);
     });
+
+    this.ipcService.send('get-player-config');
   }
 
-  protected clearMedia():void{
+  protected clearMedia(): void {
     this.clearTimeouts();
     this.currentMedia = null;
     this.changeDetectorRef.detectChanges();
@@ -110,20 +94,18 @@ export class HomeComponent extends BaseComponent {
       .pipe(this.takeUntilDestroy())
       .subscribe({
         next: (isOnline) => {
-          console.log('isOnline', isOnline);
-          this.clearTimeouts();
-          this.currentMedia = null;
-
-          if (isOnline) {
-            this.ipcService.send('get-player-config');
-
-            if (!this.isHomeOnline) {
-              this.ipcService.send('connection-restored');
-            }
+          if (isOnline && !this.isHomeOnline) {
+            this.ipcService.send('connection-restored');
           }
 
           this.isHomeOnline = isOnline;
-          this.changeDetectorRef.markForCheck();
+          const hasEmptyManifest = this.playlist.some((item) => item.type === 'slot' && !item.slotManifest);
+
+          if (this.isHomeOnline && this.playerConfig && (hasEmptyManifest || !this.playlist.length)) {
+            this.ipcService.send('get-player-config');
+          } else {
+            this.changeDetectorRef.markForCheck();
+          }
         }
       });
   }
@@ -133,12 +115,12 @@ export class HomeComponent extends BaseComponent {
 
     const mediaSlots: PlayerMedia[] = config.playlistSettings.media
       .filter((item: PlayerMedia) => item.objectType === 'slot');
-    const slotIdIn = mediaSlots.map((item) => item.objectValue).join(',');
+    this.slotIdIn = mediaSlots.map((item) => item.objectValue).join(',');
 
     if (this.playerConfig?.playerSettings.iterraToken) {
       forkJoin([
-        this.slotService.fetchSlotWidgets(slotIdIn, 'posting', this.playerConfig.playerSettings.iterraToken),
-        this.slotService.fetchSlotConfigs(slotIdIn, this.playerConfig.playerSettings.iterraToken)
+        this.slotService.fetchSlotWidgets(this.slotIdIn, 'posting', this.playerConfig.playerSettings.iterraToken),
+        this.slotService.fetchSlotConfigs(this.slotIdIn, this.playerConfig.playerSettings.iterraToken)
       ])
         .pipe(this.takeUntilDestroy())
         .subscribe({
@@ -236,12 +218,21 @@ export class HomeComponent extends BaseComponent {
       .subscribe({
         next: (posts) => {
           posts.sort((a, b) => a.id - b.id);
-          this.playlist[this.mediaIndex].slotPosts = posts;
-          this.addPost();
-          this.getNextShowMediaObject(this.playerConfig?.playlistSettings.media[this.mediaIndex].time || 0);
+          if (posts.length) {
+            this.playlist[this.mediaIndex].slotPosts = posts;
+          }
+          this.processingPosts();
         },
-        error: (error) => console.log('error', error)
+        error: (error) => {
+          console.log('error', error);
+          this.processingPosts();
+        }
       })
+  }
+
+  protected processingPosts(): void {
+    this.addPost();
+    this.getNextShowMediaObject(this.playerConfig?.playlistSettings.media[this.mediaIndex].time || 0);
   }
 
   protected addPost(): void {
@@ -250,14 +241,21 @@ export class HomeComponent extends BaseComponent {
       return;
     }
 
+    if (this.playerConfig && this.currentMedia.type === 'slot' && !this.currentMedia.slotManifest) {
+      this.clearMedia();
+      this.setPlayerConfig(this.playerConfig);
+      return;
+    }
+
+    this.isElementScrolling = false;
+
     const postIndex = this.currentSlotsIndex[this.currentMedia.slotId!];
     const slotPosts = this.playlist[this.mediaIndex].slotPosts || [];
     const blocks = slotPosts[postIndex]?.data?.blocks || [];
 
     this.imageBlock = blocks.find((item: Record<string, any>) => item['type'] === 'carousel');
     this.videoBlock = blocks.find((item: Record<string, any>) => item['type'] === 'video');
-
-    this.changeDetectorRef.detectChanges();
+    this.changeDetectorRef.markForCheck();
 
     this.checkMarquee(blocks);
     this.goToNextPost();
@@ -271,10 +269,14 @@ export class HomeComponent extends BaseComponent {
       const messageType = rubric === 'events' ? this.eventText : this.messageText;
       this.marqueeText = textBlock ? textBlock.data.text.substring(0, textBlock.data.text.indexOf(messageType)) : '';
 
-      if (this.marqueeTextElement?.nativeElement) {
-        this.isElementScrolling =
-          this.marqueeTextElement?.nativeElement?.scrollWidth >= this.marqueeTextElement?.nativeElement?.clientWidth;
-      }
+      setTimeout(() => {
+        const textElement = this.marqueeTextElement?.nativeElement;
+
+        if (textElement) {
+          this.isElementScrolling = textElement.scrollWidth > textElement.clientWidth;
+          this.changeDetectorRef.detectChanges();
+        }
+      }, 1000);
     }
 
     this.changeDetectorRef.detectChanges();

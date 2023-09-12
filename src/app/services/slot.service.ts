@@ -38,7 +38,6 @@ export class SlotService {
     };
 
     return this.apiService.get<SlotWidget[]>(path, params, options).pipe(
-      retry({ count: this.retryCount, delay: this.retryDelay }),
       catchError(() => of([])),
     );
   }
@@ -72,9 +71,7 @@ export class SlotService {
     const path = `https://widget.iterra.world/posting/slots/${slotId}/post`;
     const params = { slotId, token };
 
-    return this.apiService.get<void>(path, params).pipe(
-      retry({ count: this.retryCount, delay: this.retryDelay }),
-    );
+    return this.apiService.get<void>(path, params);
   }
 
   public getPosts(items: number[], token: string): Observable<Post[]> {
@@ -96,7 +93,6 @@ export class SlotService {
     };
 
     return this.apiService.get<Post[]>(path, {}, options).pipe(
-      retry({ count: this.retryCount, delay: this.retryDelay }),
       catchError(() => of([]))
     );
   }

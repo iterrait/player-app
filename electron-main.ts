@@ -13,7 +13,8 @@ let mainWindowOptions = {
   fullscreen: true,
   webPreferences: {
     nodeIntegration: true,
-    contextIsolation: false
+    contextIsolation: false,
+    nodeIntegrationInWorker: true,
   }
 };
 
@@ -166,6 +167,13 @@ function createWindow() {
 }
 
 function sendNotify(status) {
+  const statuses = {
+    'Идет обновление': '💿',
+    'Заснул': '💤',
+    'Проснулся': '✅',
+    'Запустился': '🚀',
+    'Соединение восстановлено': '⚠️',
+  }
   const playerConfig = storeData.get('config');
   const data = [
     `Номер плеера: %20%23player${playerConfig.playerSettings.playerNumber}%0A`,
@@ -176,7 +184,7 @@ function sendNotify(status) {
     `Адрес: ${playerConfig.playerSettings.address}%0A`,
     `Ответственный: ${playerConfig.playerSettings.responsible}%0A`,
     `Телефон: ${playerConfig.playerSettings.phone}%0A`,
-    `Статус:  ${status}`,
+    `Статус:  ${statuses[status]} ${status} ${statuses[status]}`,
   ];
 
   const params = `chat_id=${playerConfig.playerSettings.telegramChatID}&text=${data.join('')}`;
@@ -185,7 +193,7 @@ function sendNotify(status) {
   const request = net.request(path);
 
   request.on('error', (error) => {
-    mainWindow.webContents.send('black-window', error);
+    mainWindow.webContents.send('black-window', 'notify:' + error);
   });
 
   request.end();
@@ -193,7 +201,7 @@ function sendNotify(status) {
 
 function checkForUpdate(mainWindow) {
   autoUpdater.checkForUpdates().catch((error) => {
-    mainWindow.webContents.send('black-window', error);
+    mainWindow.webContents.send('black-window', 'checkForUpdates' + error);
   });
 }
 
@@ -232,6 +240,10 @@ function getPlayerConfig() {
 }
 
 function setSchedule(ruleStart, ruleEnd) {
+  for (const job in schedule.scheduledJobs) {
+    schedule.cancelJob(job);
+  }
+
   schedule.scheduleJob(ruleStart, function () {
     checkForUpdate(mainWindow);
 

@@ -7,6 +7,9 @@
 </ng-container>
 
 <ng-container *ngIf="currentMedia">
+  <div *ngIf="!isHomeOnline" class="no-home-connect">
+    <div>Отсутствует соединение</div>
+  </div>
   <ng-container *ngIf="currentMedia.type === 'slot'">
     <div class="wrapper-post"
          #wrapperPost
@@ -16,14 +19,14 @@
          [style.left.px]="currentMedia.slotManifest?.position?.left || 0">
       <img
         #postImage
-        *ngIf="imageBlock"
-        [src]="imageBlock['data'].carousel[0]"
+        *ngIf="imageBlock && imageBlock['data']?.carousel[0]"
+        [src]="imageBlock['data']?.carousel[0]"
         [class.fit_into_screen]="currentMedia.slotConfigData?.fitIntoScreen || false"
         class="post-image"
         (load)="onLoadPostImage()"/>
       <video
         #postVideo
-        *ngIf="videoBlock"
+        *ngIf="videoBlock && videoBlock['data'].src"
         [src]="videoBlock['data'].src"
         [class.fit_into_screen]="currentMedia.slotConfigData?.fitIntoScreen || false"
         autoplay
@@ -42,6 +45,7 @@
         [class.marquee__theme-day]="currentMedia.slotConfigData?.rubric === 'theme-day'">
         <div
           #marqueeTextElement
+          class="marquee-content"
           [class.marquee__animation-text]="isElementScrolling">
           {{marqueeText}}
         </div>
