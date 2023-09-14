@@ -114,6 +114,7 @@ function createWindow() {
           width: 900,
           height: 900,
           parent: mainWindow,
+          type: 'toolbar',
           title: 'Настройки',
           modal: true,
           resizable: false,
@@ -205,12 +206,22 @@ function checkForUpdate(mainWindow) {
   });
 }
 
+function setDateTime(hours, minutes) {
+  const date = new Date();
+
+  date.setUTCHours(hours);
+  date.setUTCMinutes(minutes);
+
+  return date;
+}
+
 function getPlayerConfig() {
   const config = storeData.get('config');
 
   if (!config.playlistSettings.start || !config.playlistSettings.end) {
     return;
   }
+
   const playerStart = config.playlistSettings.start.split(':');
   const playerEnd = config.playlistSettings.end.split(':');
 
@@ -223,20 +234,17 @@ function getPlayerConfig() {
   ruleEnd.minute = Number(playerEnd[1]) || 0;
 
   const currentDate = new Date();
-  const currentHour = currentDate.getHours();
-  const currentMinutes = currentDate.getMinutes();
+  const startDateTime = setDateTime(ruleStart.hour, ruleStart.minute);
+  const endDateTime = setDateTime(ruleEnd.hour, ruleEnd.minute);
+  const currentTime = currentDate.getTime();
 
-  const isExistence = ruleStart.hour || ruleStart.minute || ruleEnd.hour || ruleEnd.minute;
-  const isCurrentStart = currentHour > ruleStart.hour || (currentHour === ruleStart.hour && currentMinutes > ruleStart.minute);
-  const isCurrentEnd = currentHour < ruleEnd.hour || (currentHour === ruleEnd.hour && currentMinutes < ruleEnd.minute);
-
-  setSchedule(ruleStart, ruleEnd);
-
-  if (isExistence && isCurrentStart && isCurrentEnd) {
+  if (currentTime >= startDateTime.getTime() && currentTime < endDateTime.getTime()) {
     mainWindow.webContents.send('player-rotation-config', config);
   } else {
     mainWindow.webContents.send('black-window', 'sleep');
   }
+
+  setSchedule(ruleStart, ruleEnd);
 }
 
 function setSchedule(ruleStart, ruleEnd) {
