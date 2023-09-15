@@ -11,6 +11,7 @@ let mainWindowOptions = {
   height: 1800,
   autoHideMenuBar: true,
   fullscreen: true,
+  type: 'toolbar',
   webPreferences: {
     nodeIntegration: true,
     contextIsolation: false,
@@ -114,7 +115,6 @@ function createWindow() {
           width: 900,
           height: 900,
           parent: mainWindow,
-          type: 'toolbar',
           title: 'Настройки',
           modal: true,
           resizable: false,
@@ -209,8 +209,8 @@ function checkForUpdate(mainWindow) {
 function setDateTime(hours, minutes) {
   const date = new Date();
 
-  date.setUTCHours(hours);
-  date.setUTCMinutes(minutes);
+  date.setHours(hours);
+  date.setMinutes(minutes);
 
   return date;
 }
