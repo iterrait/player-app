@@ -1,6 +1,6 @@
 {
   "name": "iterra-player",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "main": "main.js",
   "license": "MIT",
   "type": "commonjs",
@@ -41,8 +41,10 @@
   },
   "dependencies": {
     "@types/electron": "^1.6.10",
+    "electron-log": "^4.4.8",
     "electron-updater": "^5.3.0",
     "node-schedule": "^2.1.1",
+    "node-telegram-bot-api": "^0.63.0",
     "postinstall": "^0.8.0"
   },
   "devDependencies": {

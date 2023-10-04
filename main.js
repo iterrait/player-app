@@ -1,10 +1,16 @@
-const { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, net } = require('electron');
+const { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu } = require('electron');
 const { autoUpdater } = require('electron-updater');
-
+const log = require('electron-log');
+const fs = require('fs');
+const electron = require("electron");
+const path = require("path");
 const schedule = require('node-schedule');
+
+const TelegramBot = require('node-telegram-bot-api');
 
 let aboutWindow, configWindow, mainWindow;
 let ruleStart, ruleEnd;
+let bot, userDataPath, logPath;
 let mainWindowOptions = {
   center: true,
   width: 1500,
@@ -49,6 +55,12 @@ if (!gotTheLock) {
   });
 
   app.on('ready', () => {
+    const playerConfig = storeData.get('config');
+
+    bot = new TelegramBot(playerConfig.playerSettings.telegramBotToken);
+    userDataPath = (electron.app || electron.remote.app).getPath('userData');
+    logPath = path.join(userDataPath, 'logs/main.log');
+
     createWindow();
     sendNotify('Запустился');
     checkForUpdate(mainWindow);
@@ -82,7 +94,9 @@ ipcMain.on('open-dialog', (event, args) => {
     .then((data) => {
       configWindow.webContents.send('set-file', { ...data, uuid: args.uuid });
     })
-    .catch((error) => console.log('error file', error));
+    .catch((error) => {
+      log.error(`error file - ${error}`);
+    });
 });
 
 ipcMain.on('get-player-config', function (event, arg) {
@@ -90,6 +104,7 @@ ipcMain.on('get-player-config', function (event, arg) {
 });
 
 ipcMain.on('connection-restored', function (event, arg) {
+  log.error('connection restored');
   sendNotify('Соединение восстановлено');
 });
 
@@ -99,6 +114,7 @@ ipcMain.on('get-settings', function (event, arg) {
 
 // При загрузке обновления происходит автоматическая установка
 autoUpdater.on('update-downloaded', () => {
+  log.info('update downloaded');
   sendNotify('Идет обновление');
   autoUpdater.quitAndInstall();
 });
@@ -177,31 +193,25 @@ function sendNotify(status) {
   }
   const playerConfig = storeData.get('config');
   const data = [
-    `Номер плеера: %20%23player${playerConfig.playerSettings.playerNumber}%0A`,
-    `AnyDeskID: ${playerConfig.playerSettings.anydeskId}%0A`,
-    `Версия плеера: ${app.getVersion()}%0A`,
-    `Проект: ${playerConfig.playerSettings.project}%0A`,
-    `Организация: ${playerConfig.playerSettings.organization}%0A`,
-    `Адрес: ${playerConfig.playerSettings.address}%0A`,
-    `Ответственный: ${playerConfig.playerSettings.responsible}%0A`,
-    `Телефон: ${playerConfig.playerSettings.phone}%0A`,
+    `Номер плеера: #player${playerConfig.playerSettings.playerNumber}`,
+    `AnyDeskID: ${playerConfig.playerSettings.anydeskId}`,
+    `Версия плеера: ${app.getVersion()}`,
+    `Проект: ${playerConfig.playerSettings.project}`,
+    `Организация: ${playerConfig.playerSettings.organization}`,
+    `Адрес: ${playerConfig.playerSettings.address}`,
+    `Ответственный: ${playerConfig.playerSettings.responsible}`,
+    `Телефон: ${playerConfig.playerSettings.phone}`,
     `Статус:  ${statuses[status]} ${status} ${statuses[status]}`,
   ];
 
-  const params = `chat_id=${playerConfig.playerSettings.telegramChatID}&text=${data.join('')}`;
-  const path = `https://api.telegram.org/bot${playerConfig.playerSettings.telegramBotToken}/sendMessage?${params}`;
-
-  const request = net.request(path);
-
-  request.on('error', (error) => {
-    mainWindow.webContents.send('black-window', 'notify:' + error);
-  });
-
-  request.end();
+  bot.sendMessage(playerConfig.playerSettings.telegramChatID, data.join('\n'))
+    .then(() => log.info(status))
+    .catch((error) => log.error(`Ошибка при отправке status - ${error}`));
 }
 
 function checkForUpdate(mainWindow) {
   autoUpdater.checkForUpdates().catch((error) => {
+    log.error(`error checkForUpdates - ${error}`);
     mainWindow.webContents.send('black-window', 'checkForUpdates' + error);
   });
 }
@@ -264,5 +274,15 @@ function setSchedule(ruleStart, ruleEnd) {
     checkForUpdate(mainWindow);
     mainWindow.webContents.send('black-window', 'sleep');
     sendNotify('Заснул');
+
+    const playerConfig = storeData.get('config');
+    const date = new Date();
+    const formattedDate = `${date.getDate()}_${date.getMonth()}_${date.getFullYear()}`;
+
+    bot.sendDocument(playerConfig.playerSettings.telegramChatID, fs.createReadStream(logPath), {}, {
+      filename: `#player${playerConfig.playerSettings.playerNumber}-v${app.getVersion()}-${formattedDate}.log`
+    })
+      .then(() => log.info('log отправлен'))
+      .catch((error) => log.error(`Ошибка при отправке log - ${error}`));
   });
 }
