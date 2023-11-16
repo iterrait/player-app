@@ -60,6 +60,7 @@ export interface SlotWidgetConfigData {
   backgroundAnimationLogo?: string;
   backgroundAnimationQr?: string;
   backgroundDisplayFinger?: boolean;
+  marqueeHeight?: number;
 }
 
 export interface Post {

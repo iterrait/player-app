@@ -35,18 +35,21 @@
         (loadeddata)="onLoadPostVideo()">
       </video>
       <div
-        #marquee
+        #marqueeContainer
         *ngIf="currentMedia.slotConfigData?.marquee"
         class="marquee"
+        [style.height.px]="currentMedia.slotConfigData?.marqueeHeight ?? 65"
         [class.marquee__news]="currentMedia.slotConfigData?.rubric === 'news'"
         [class.marquee__photo]="currentMedia.slotConfigData?.rubric === 'photo'"
         [class.marquee__events]="currentMedia.slotConfigData?.rubric === 'events'"
         [class.marquee__ads]="currentMedia.slotConfigData?.rubric === 'ads'"
         [class.marquee__theme-day]="currentMedia.slotConfigData?.rubric === 'theme-day'">
         <div
-          #marqueeTextElement
-          class="marquee-content"
-          [class.marquee__animation-text]="isElementScrolling">
+          #marqueeTextContainer
+          class="marquee-text marquee-text__animation"
+          [style.animationDuration.s]="marqueeSpeed"
+          [style.fontSize.px]="marqueeFontSize"
+          [class.none-animation]="isNoneMarqueeAnimation">
           {{marqueeText}}
         </div>
       </div>

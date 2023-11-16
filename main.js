@@ -55,11 +55,13 @@ if (!gotTheLock) {
   });
 
   app.on('ready', () => {
-    const playerConfig = storeData.get('config');
+    const playerConfig = storeData.get('config') || {};
 
-    bot = new TelegramBot(playerConfig.playerSettings.telegramBotToken);
-    userDataPath = (electron.app || electron.remote.app).getPath('userData');
-    logPath = path.join(userDataPath, 'logs/main.log');
+    if (playerConfig.playerSettings && playerConfig.playerSettings.telegramBotToken) {
+      bot = new TelegramBot(playerConfig.playerSettings.telegramBotToken);
+      userDataPath = (electron.app || electron.remote.app).getPath('userData');
+      logPath = path.join(userDataPath, 'logs/main.log');
+    }
 
     createWindow();
     sendNotify('Запустился');
@@ -184,6 +186,12 @@ function createWindow() {
 }
 
 function sendNotify(status) {
+  const playerConfig = storeData.get('config') || {};
+
+  if (!playerConfig.playerSettings || !playerConfig.playerSettings.telegramChatID) {
+    return;
+  }
+
   const statuses = {
     'Идет обновление': '💿',
     'Заснул': '💤',
@@ -191,9 +199,9 @@ function sendNotify(status) {
     'Запустился': '🚀',
     'Соединение восстановлено': '⚠️',
   }
-  const playerConfig = storeData.get('config');
+
   const data = [
-    `Номер плеера: #player${playerConfig.playerSettings.playerNumber}`,
+    `Номер плеера: ${statuses[status]} #player${playerConfig.playerSettings.playerNumber}${statuses[status]}`,
     `AnyDeskID: ${playerConfig.playerSettings.anydeskId}`,
     `Версия плеера: ${app.getVersion()}`,
     `Проект: ${playerConfig.playerSettings.project}`,
@@ -201,7 +209,6 @@ function sendNotify(status) {
     `Адрес: ${playerConfig.playerSettings.address}`,
     `Ответственный: ${playerConfig.playerSettings.responsible}`,
     `Телефон: ${playerConfig.playerSettings.phone}`,
-    `Статус:  ${statuses[status]} ${status} ${statuses[status]}`,
   ];
 
   bot.sendMessage(playerConfig.playerSettings.telegramChatID, data.join('\n'))
@@ -226,9 +233,9 @@ function setDateTime(hours, minutes) {
 }
 
 function getPlayerConfig() {
-  const config = storeData.get('config');
+  const config = storeData.get('config') || {};
 
-  if (!config.playlistSettings.start || !config.playlistSettings.end) {
+  if (!config.playlistSettings || !config.playlistSettings.start || !config.playlistSettings.end) {
     return;
   }
 
@@ -279,10 +286,12 @@ function setSchedule(ruleStart, ruleEnd) {
     const date = new Date();
     const formattedDate = `${date.getDate()}_${date.getMonth()}_${date.getFullYear()}`;
 
-    bot.sendDocument(playerConfig.playerSettings.telegramChatID, fs.createReadStream(logPath), {}, {
-      filename: `#player${playerConfig.playerSettings.playerNumber}-v${app.getVersion()}-${formattedDate}.log`
-    })
-      .then(() => log.info('log отправлен'))
-      .catch((error) => log.error(`Ошибка при отправке log - ${error}`));
+    if (playerConfig && playerConfig.playerSettings.telegramChatID) {
+      bot.sendDocument(playerConfig.playerSettings.telegramChatID, fs.createReadStream(logPath), {}, {
+        filename: `#player${playerConfig.playerSettings.playerNumber}-v${app.getVersion()}-${formattedDate}.log`
+      })
+        .then(() => log.info('log отправлен'))
+        .catch((error) => log.error(`Ошибка при отправке log - ${error}`));
+    }
   });
 }

@@ -6,31 +6,30 @@
   [style.top.px]="backgroundConfig.backgroundTop || 0"
   [style.left.px]="backgroundConfig.backgroundLeft || 0"
   [style.z-index]="backgroundConfig.backgroundLayer && backgroundConfig.backgroundLayer === 'front' ? '3' : '-1'">
-  <div
-    class="background-overlay__wrapper"
-    [class.background-overlay__wrapper--news]="backgroundConfig.rubric === 'news'"
-    [class.background-overlay__wrapper--photo]="backgroundConfig.rubric === 'photo'"
-    [class.background-overlay__wrapper--events]="backgroundConfig.rubric === 'events'"
-    [class.background-overlay__wrapper--ads]="backgroundConfig.rubric === 'ads'"
-    [class.background-overlay__wrapper--theme-day]="backgroundConfig.rubric === 'theme-day'">
-    <div class="background-overlay__title-wrapper">
-      <div class="background-overlay__title">Telegram-канал</div>
-      <div
-        #channel
-        [style.fontSize]="fontSize+'px'"
-        class="background-overlay__channel">
-        <span>&nbsp;&nbsp;@{{backgroundConfig.backgroundAnimationChannel}}&nbsp;&nbsp;</span>
-      </div>
-    </div>
+  <div class="background-overlay__title-wrapper">
+    <div class="background-overlay__title">Telegram-канал</div>
     <div
-      class="background-overlay__rubric"
-      [style.background-image]="'url(./assets/images/rubrics/'+backgroundConfig.rubric+'.svg)'">
+      #channel
+      [style.fontSize]="fontSize+'px'"
+      class="background-overlay__channel">
+      @{{backgroundConfig.backgroundAnimationChannel}}
     </div>
-    <img [src]="backgroundConfig.backgroundAnimationLogo" class="background-overlay__logo"/>
+  </div>
+  <img [src]="backgroundConfig.backgroundAnimationLogo" class="background-overlay__logo"/>
+  <div class="background-overlay__qr-wrapper">
     <img [src]="backgroundConfig.backgroundAnimationQr" class="background-overlay__qr"/>
-    <div *ngIf="backgroundConfig.backgroundDisplayFinger" class="background-overlay__arm-out">
-      <img [src]="'./assets/images/arm.svg'" class="background-overlay__arm"/>
+  </div>
+  <div
+    class="background-overlay__rubric"
+    [style.height.px]="backgroundConfig.marqueeHeight ?? 65"
+    [ngClass]="rubricClassName">
+    <img
+      [style.height.px]="(backgroundConfig.marqueeHeight ?? 40) - 8"
+      [src]="'./assets/images/rubric-images/'+backgroundConfig.rubric+'.svg'">
+    <div
+      class="background-overlay__rubric-text"
+      [style.fontSize.px]="marqueeFontSize">
+      {{rubrics[backgroundConfig.rubric]}}
     </div>
-    <div class="background-overlay__text">Отправь сюда</div>
   </div>
 </div>

@@ -17,8 +17,8 @@ export class HomeComponent extends BaseComponent {
   @ViewChild('wrapperPost') public wrapperPost!: ElementRef<HTMLElement>;
   @ViewChild('postCanvas') public postCanvas!: ElementRef<HTMLCanvasElement>;
 
-  @ViewChild('marquee') public marquee!: ElementRef<HTMLElement>;
-  @ViewChild('marqueeTextElement') public marqueeTextElement!: ElementRef<HTMLDivElement>;
+  @ViewChild('marqueeContainer') public marqueeContainer!: ElementRef<HTMLDivElement>;
+  @ViewChild('marqueeTextContainer') public marqueeTextContainer!: ElementRef<HTMLDivElement>;
 
   @ViewChild('postImage') public postImage!: ElementRef<HTMLImageElement>;
   @ViewChild('postVideo') public postVideo!: ElementRef<HTMLVideoElement>;
@@ -27,6 +27,9 @@ export class HomeComponent extends BaseComponent {
   protected playlist: PlaylistMedia[] = [];
 
   protected mediaIndex = 0;
+  protected canMarquee = false;
+  protected isNoneMarqueeAnimation = true;
+  protected marqueeSpeed = 0;
 
   protected mediaObjectTimeoutId: NodeJS.Timeout | null = null;
   protected postTimeoutId: NodeJS.Timeout | null = null;
@@ -42,6 +45,7 @@ export class HomeComponent extends BaseComponent {
 
   public currentMedia: PlaylistMedia | null = null;
   protected marqueeText: string = '';
+  protected marqueeFontSize = 0;
 
   protected currentSlotsIndex: Record<number, number> = {};
   protected isElementScrolling = false;
@@ -247,6 +251,9 @@ export class HomeComponent extends BaseComponent {
       return;
     }
 
+    this.isNoneMarqueeAnimation = true;
+    this.changeDetectorRef.markForCheck();
+
     this.isElementScrolling = false;
 
     const postIndex = this.currentSlotsIndex[this.currentMedia.slotId!];
@@ -264,19 +271,18 @@ export class HomeComponent extends BaseComponent {
   protected checkMarquee(blocks: any): void {
     const rubric = this.playlist[this.mediaIndex]!.slotConfigData?.rubric || 'default';
     const textBlock = blocks.find((item: Record<string, any>) => item['type'] === 'paragraph');
+    this.marqueeFontSize = (this.currentMedia?.slotConfigData?.marqueeHeight ?? 0) * 0.8;
 
     if (this.playlist[this.mediaIndex].slotConfigData?.marquee) {
       const messageType = rubric === 'events' ? this.eventText : this.messageText;
       this.marqueeText = textBlock ? textBlock.data.text.substring(0, textBlock.data.text.indexOf(messageType)) : '';
 
       setTimeout(() => {
-        const textElement = this.marqueeTextElement?.nativeElement;
-
-        if (textElement) {
-          this.isElementScrolling = textElement.scrollWidth > textElement.clientWidth;
-          this.changeDetectorRef.detectChanges();
-        }
-      }, 1000);
+        this.isNoneMarqueeAnimation = false;
+        const marqueeWidth = this.marqueeTextContainer.nativeElement.offsetWidth;
+        this.marqueeSpeed = 3 * (marqueeWidth / 1000);
+        this.changeDetectorRef.detectChanges();
+      }, 500);
     }
 
     this.changeDetectorRef.detectChanges();
@@ -289,6 +295,7 @@ export class HomeComponent extends BaseComponent {
 
   protected goToNextPost(): void {
     const slotId = this.playlist[this.mediaIndex].slotId;
+    this.canMarquee = false;
 
     this.currentSlotsIndex[slotId!] =
       (this.currentSlotsIndex[slotId!] === this.playlist[this.mediaIndex].slotPosts!.length - 1)
