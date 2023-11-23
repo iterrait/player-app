@@ -1,13 +1,13 @@
 <ng-container *ngIf="!currentMedia">
   <div class="sleep-block">
-    <div *ngIf="!isHomeOnline" class="no-connect">
+    <div *ngIf="!isOnline" class="no-connect">
       <div>Нет соединения с интернетом</div>
     </div>
   </div>
 </ng-container>
 
 <ng-container *ngIf="currentMedia">
-  <div *ngIf="!isHomeOnline" class="no-home-connect">
+  <div *ngIf="!isOnline" class="no-home-connect">
     <div>Отсутствует соединение</div>
   </div>
   <ng-container *ngIf="currentMedia.type === 'slot'">

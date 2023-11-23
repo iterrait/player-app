@@ -13,6 +13,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTabsModule } from '@angular/material/tabs';
+
 import { NgxMatTimepickerModule } from 'ngx-mat-timepicker';
 
 import { AppRoutingModule } from './app-routing.module';
@@ -57,7 +58,6 @@ import { PlaylistSettingsComponent } from './pages/settings/playlist-settings/pl
     ReactiveFormsModule,
     SimpleBackgroundComponent,
   ],
-  providers: [],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

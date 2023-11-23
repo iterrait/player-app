@@ -61,6 +61,7 @@ export interface SlotWidgetConfigData {
   backgroundAnimationQr?: string;
   backgroundDisplayFinger?: boolean;
   marqueeHeight?: number;
+  marqueeSpeed?: number;
 }
 
 export interface Post {

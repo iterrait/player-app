@@ -1,19 +1,18 @@
-import { ChangeDetectorRef, Component, ElementRef, ViewChild } from '@angular/core';
-import { BehaviorSubject, combineLatest, forkJoin, fromEvent, Observable, shareReplay, startWith } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { ChangeDetectorRef, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { forkJoin, fromEvent, merge, of, tap } from 'rxjs';
 
 import { BaseComponent } from '$directives/base.component';
 import { IpcService } from '$services/ipc-renderer.service';
 import { SlotService } from '$services/slot.service';
-import { PlayerConfig, PlayerMedia, PlaylistMedia } from '$types/player.types';
 import { ObjectsService } from '$services/objects.service';
+import { PlayerConfig, PlayerMedia, PlaylistMedia } from '$types/player.types';
 
 @Component({
   selector: 'home',
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss'],
 })
-export class HomeComponent extends BaseComponent {
+export class HomeComponent extends BaseComponent implements OnInit {
   @ViewChild('wrapperPost') public wrapperPost!: ElementRef<HTMLElement>;
   @ViewChild('postCanvas') public postCanvas!: ElementRef<HTMLCanvasElement>;
 
@@ -46,13 +45,13 @@ export class HomeComponent extends BaseComponent {
   public currentMedia: PlaylistMedia | null = null;
   protected marqueeText: string = '';
   protected marqueeFontSize = 0;
+  protected defaultMarqueeSpeed = 4;
 
   protected currentSlotsIndex: Record<number, number> = {};
   protected isElementScrolling = false;
 
-  protected isHomeOnline$: Observable<boolean> = new BehaviorSubject<boolean>(true);
-  protected isHomeOnline = true;
   protected slotIdIn: string | null = null;
+  protected isOnline = window.navigator.onLine;
 
   constructor(
     private changeDetectorRef: ChangeDetectorRef,
@@ -65,7 +64,33 @@ export class HomeComponent extends BaseComponent {
     this.windowHeight = window.innerHeight;
     this.windowWidth = window.innerWidth;
 
-    this.subscribeToOnline();
+    merge(
+      of(navigator.onLine),
+      fromEvent(window, 'online').pipe(
+        tap(() => {
+          console.log('online');
+          this.isOnline = true;
+          this.ipcService.send('get-player-config');
+          this.ipcService.send('connection-restored');
+        }),
+      ),
+      fromEvent(window, 'offline').pipe(
+        tap(() => {
+          console.log('offline');
+          this.isOnline = false;
+          this.changeDetectorRef.markForCheck();
+        }),
+      ),
+    )
+      .pipe(this.takeUntilDestroy())
+      .subscribe();
+
+    this.ipcService.on('no-connect', () => {
+      console.log('no-connect');
+      this.clearMedia();
+      this.isOnline = false;
+      this.changeDetectorRef.detectChanges();
+    });
 
     this.ipcService.on('black-window', (event, data) => {
       console.log('black-window', data);
@@ -75,43 +100,18 @@ export class HomeComponent extends BaseComponent {
     this.ipcService.on('player-rotation-config', (event, config) => {
       this.setPlayerConfig(config);
     });
+  }
 
-    this.ipcService.send('get-player-config');
+  public ngOnInit(): void {
+    if (this.isOnline) {
+      this.ipcService.send('get-player-config');
+    }
   }
 
   protected clearMedia(): void {
     this.clearTimeouts();
     this.currentMedia = null;
     this.changeDetectorRef.detectChanges();
-  }
-
-  protected subscribeToOnline(): void {
-    this.isHomeOnline$ = combineLatest([
-      fromEvent(window, 'online').pipe(startWith(null)),
-      fromEvent(window, 'offline').pipe(startWith(null)),
-    ]).pipe(
-      map(() => navigator.onLine),
-      shareReplay(),
-    );
-
-    this.isHomeOnline$
-      .pipe(this.takeUntilDestroy())
-      .subscribe({
-        next: (isOnline) => {
-          if (isOnline && !this.isHomeOnline) {
-            this.ipcService.send('connection-restored');
-          }
-
-          this.isHomeOnline = isOnline;
-          const hasEmptyManifest = this.playlist.some((item) => item.type === 'slot' && !item.slotManifest);
-
-          if (this.isHomeOnline && this.playerConfig && (hasEmptyManifest || !this.playlist.length)) {
-            this.ipcService.send('get-player-config');
-          } else {
-            this.changeDetectorRef.markForCheck();
-          }
-        }
-      });
   }
 
   protected setPlayerConfig(config: PlayerConfig): void {
@@ -177,7 +177,7 @@ export class HomeComponent extends BaseComponent {
 
     switch (this.playlist[this.mediaIndex].type) {
       case 'slot':
-        if (this.playlist[this.mediaIndex].slotId && this.playerConfig?.playerSettings.iterraToken) {
+        if (this.playlist[this.mediaIndex].slotId && this.playerConfig?.playerSettings.iterraToken && this.isOnline) {
           this.slotService
             .moveCounter(this.playlist[this.mediaIndex].slotId!, this.playerConfig?.playerSettings.iterraToken!)
             .pipe(this.takeUntilDestroy())
@@ -214,6 +214,11 @@ export class HomeComponent extends BaseComponent {
 
     if (!postIds) {
       console.log('Нет текущих постов для показа');
+      return;
+    }
+
+    if (!this.isOnline) {
+      this.processingPosts();
       return;
     }
 
@@ -278,9 +283,13 @@ export class HomeComponent extends BaseComponent {
       this.marqueeText = textBlock ? textBlock.data.text.substring(0, textBlock.data.text.indexOf(messageType)) : '';
 
       setTimeout(() => {
-        this.isNoneMarqueeAnimation = false;
         const marqueeWidth = this.marqueeTextContainer.nativeElement.offsetWidth;
-        this.marqueeSpeed = 3 * (marqueeWidth / 1000);
+        const configMarqueeSpeed = this.currentMedia?.slotConfigData?.marqueeSpeed
+          ? this.currentMedia?.slotConfigData?.marqueeSpeed
+          : this.defaultMarqueeSpeed;
+
+        this.isNoneMarqueeAnimation = false;
+        this.marqueeSpeed = (configMarqueeSpeed - 1) * (marqueeWidth / 1000);
         this.changeDetectorRef.detectChanges();
       }, 500);
     }
@@ -302,7 +311,7 @@ export class HomeComponent extends BaseComponent {
         ? 0
         : ++this.currentSlotsIndex[slotId!];
 
-    if (this.currentSlotsIndex[slotId!] === 0) {
+    if (this.currentSlotsIndex[slotId!] === 0 && this.isOnline) {
       this.slotService
         .fetchSlotConfigs(this.playlist[this.mediaIndex].slotId!, this.playerConfig?.playerSettings.iterraToken!)
         .pipe(this.takeUntilDestroy())
