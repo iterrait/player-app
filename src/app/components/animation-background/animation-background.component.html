@@ -11,8 +11,9 @@
     <div
       #channel
       [style.fontSize]="fontSize+'px'"
-      class="background-overlay__channel">
-      @{{backgroundConfig.backgroundAnimationChannel}}
+      class="background-overlay__channel"
+    >
+      <span>&#64;</span>{{backgroundConfig.backgroundAnimationChannel}}
     </div>
   </div>
   <img [src]="backgroundConfig.backgroundAnimationLogo" class="background-overlay__logo"/>
@@ -22,7 +23,8 @@
   <div
     class="background-overlay__rubric"
     [style.height.px]="backgroundConfig.marqueeHeight ?? 65"
-    [ngClass]="rubricClassName">
+    [ngClass]="rubricClassName"
+  >
     <img
       [style.height.px]="(backgroundConfig.marqueeHeight ?? 40) - 8"
       [src]="'./assets/images/rubric-images/'+backgroundConfig.rubric+'.svg'">
