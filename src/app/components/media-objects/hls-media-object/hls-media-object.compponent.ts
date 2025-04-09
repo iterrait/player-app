@@ -14,7 +14,7 @@ import { PlayerMedia } from '$types/player.types';
 import { HlsMediaObjectService } from './hls-media-object.service';
 
 @Component({
-  selector: 'hls-media-media-object',
+  selector: 'hls-media-object',
   standalone: true,
   templateUrl: './hls-media-object.component.html',
   styleUrls: ['./hls-media-object.component.scss'],

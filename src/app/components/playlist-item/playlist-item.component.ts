@@ -4,25 +4,24 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
-  EventEmitter,
   forwardRef,
-  Output
+  inject,
+  output,
 } from '@angular/core';
 import {
   ControlValueAccessor,
-  FormBuilder,
   FormControl,
   FormGroup,
   FormsModule,
   NG_VALUE_ACCESSOR,
   ReactiveFormsModule,
 } from '@angular/forms';
-import * as uuid from 'uuid';
 import { MatButtonModule } from '@angular/material/button';
 import { MatOptionModule } from '@angular/material/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import * as uuid from 'uuid';
 
 import { BaseComponent } from '$directives/base.component';
 import { IpcService } from '$services/ipc-renderer.service';
@@ -59,12 +58,16 @@ interface PlaylistItemType {
   ]
 })
 export class PlaylistItemComponent extends BaseComponent implements AfterViewInit, ControlValueAccessor {
-  @Output() public deleteItem = new EventEmitter<void>();
+  public deleteItem = output();
 
-  protected form: FormGroup = this.formBuilder.group({
-    objectType: [null],
-    objectValue: [null],
-    time: [null],
+  private changeDetectorRef = inject(ChangeDetectorRef);
+  private ipcService = inject(IpcService);
+  private objectsService = inject(ObjectsService);
+
+  protected form = new FormGroup({
+    objectType: new FormControl<MediaType | null>(null),
+    objectValue: new FormControl<string | number | null>(null),
+    time: new FormControl<number | null>(null),
   });
 
   private objectUuid: string | null = null;
@@ -75,7 +78,9 @@ export class PlaylistItemComponent extends BaseComponent implements AfterViewIni
 
   protected playlistItemTypes: PlaylistItemType[] = [
     { title: 'Слот', objType: 'slot' },
-    { title: 'Файл', objType: 'file' },
+    { title: 'Видео', objType: 'video' },
+    { title: 'Картинка', objType: 'image' },
+    { title: 'hls-поток', objType: 'hls-stream' },
   ];
 
   protected get objectType(): FormControl {
@@ -90,12 +95,7 @@ export class PlaylistItemComponent extends BaseComponent implements AfterViewIni
     return this.form.get('time') as FormControl;
   }
 
-  constructor(
-    private changeDetectorRef: ChangeDetectorRef,
-    private formBuilder: FormBuilder,
-    private ipcService: IpcService,
-    private objectsService: ObjectsService,
-  ) {
+  constructor() {
     super();
 
     this.form.valueChanges
@@ -104,6 +104,18 @@ export class PlaylistItemComponent extends BaseComponent implements AfterViewIni
         next: () => {
           this.onChangeFn(this.form.getRawValue());
         }
+      });
+
+    this.objectType.valueChanges
+      .pipe(this.takeUntilDestroy())
+      .subscribe({
+        next: (value) => {
+          if (value === 'video') {
+            this.time.disable();
+          } else {
+            this.time.enable();
+          }
+        },
       });
   }
 
@@ -128,7 +140,7 @@ export class PlaylistItemComponent extends BaseComponent implements AfterViewIni
     this.onChangeFn = fn;
   }
 
-  registerOnTouched(fn: any): void {
+  public registerOnTouched(fn: any): void {
     this.onTouchedFn = fn;
   }
 
@@ -150,12 +162,7 @@ export class PlaylistItemComponent extends BaseComponent implements AfterViewIni
     this.changeDetectorRef.markForCheck();
   }
 
-  protected processValue(): void {
-    if (this.objectType.value !== 'file') {
-      return;
-    }
-
-    this.objectValue.disable();
+  protected chooseFile(): void {
     this.objectUuid = uuid.v4();
     this.ipcService.send('open-dialog', { uuid: this.objectUuid } as any);
   }

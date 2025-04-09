@@ -5,10 +5,12 @@ const fs = require('fs');
 const electron = require("electron");
 const path = require("path");
 const schedule = require('node-schedule');
+const { desktopCapturer } = require('electron')
 
 const TelegramBot = require('node-telegram-bot-api');
 
 let aboutWindow, configWindow, mainWindow;
+let intervalIdForSendPhotoWorkTable;
 let ruleStart, ruleEnd;
 let bot, userDataPath, logPath;
 let mainWindowOptions = {
@@ -65,10 +67,12 @@ if (!gotTheLock) {
 
     createWindow();
     sendNotify('Запустился');
-    checkForUpdate(mainWindow);
+    checkForUpdate();
+    checkPhotoWorkTable();
 
     globalShortcut.register('Escape', function () {
       app.quit();
+      clearInterval(intervalIdForSendPhotoWorkTable);
     });
   })
 }
@@ -105,6 +109,14 @@ ipcMain.on('get-player-config', function (event, arg) {
   getPlayerConfig();
 });
 
+ipcMain.on('check-update', function (event, arg) {
+  checkForUpdate();
+});
+
+ipcMain.on('log-info', function (event, arg) {
+  log.info(arg);
+});
+
 ipcMain.on('connection-restored', function (event, arg) {
   log.error('connection restored');
   sendNotify('Соединение восстановлено');
@@ -122,6 +134,7 @@ autoUpdater.on('update-downloaded', () => {
 });
 
 function createWindow() {
+  console.log('Store', Store);
   mainWindow = new BrowserWindow(mainWindowOptions);
   mainWindow.loadURL(`file://${__dirname}/dist-electron/index.html`);
 
@@ -178,10 +191,52 @@ function createWindow() {
   let menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
 
+  mainWindow.on('blur', ()=>{
+    setTimeout(() => mainWindow.focus(), 100000);
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
     configWindow = null;
     aboutWindow = null;
+  });
+}
+
+function checkPhotoWorkTable() {
+  const HOUR = 3600000;
+
+  clearInterval(intervalIdForSendPhotoWorkTable);
+
+  // Отпавка скриншотов в бот 1 раз в час
+  intervalIdForSendPhotoWorkTable = setInterval(() => sendPhotoWorkTable(), HOUR);
+}
+
+function sendPhotoWorkTable(){
+  desktopCapturer.getSources({
+    types: ['screen'], thumbnailSize: {
+      height: 1920,
+      width: 1080,
+    }
+  }).then(sources => {
+    const playerConfig = storeData.get('config') || {};
+
+    const date = new Date();
+    const time = `${date.getDate()}.${date.getMonth()}.${date.getFullYear()} ${date.getHours()}:${date.getMinutes()}`;
+
+    const info1 = `#player${playerConfig.playerSettings.playerNumber} ${time} v${app.getVersion()} \n`;
+    const info2 = `${playerConfig.playerSettings.organization ?? ''}, ${playerConfig.playerSettings.address ?? ''} \n`;
+    const info3 = `${playerConfig.playerSettings.responsible ?? ''}, ${playerConfig.playerSettings.phone ?? ''}`;
+
+    bot.sendPhoto(
+        playerConfig.playerSettings.telegramChatID,
+        sources[0].thumbnail.toJPEG(50),
+        {
+          caption: `${info1}${info2}${info3}`,
+        },
+        {
+          filename: `${info1}`,
+        },
+    ).then();
   });
 }
 
@@ -216,10 +271,9 @@ function sendNotify(status) {
     .catch((error) => log.error(`Ошибка при отправке status - ${error}`));
 }
 
-function checkForUpdate(mainWindow) {
+function checkForUpdate() {
   autoUpdater.checkForUpdates().catch((error) => {
     log.error(`error checkForUpdates - ${error}`);
-    mainWindow.webContents.send('black-window', 'checkForUpdates' + error);
   });
 }
 

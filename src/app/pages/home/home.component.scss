@@ -3,6 +3,11 @@
 :host {
   position: relative;
 
+   video, iframe{
+    width: 100%;
+    height: 100%;
+  }
+
   .wrapper-post {
     position: relative;
     overflow: hidden;
@@ -54,134 +59,6 @@
         left: -20px;
         background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.29 4.85996L1.82002 19C1.46466 19.6154 1.46254 20.3731 1.81445 20.9905C2.16635 21.6079 2.81943 21.9921 3.53002 22H20.47C21.1806 21.9921 21.8337 21.6079 22.1856 20.9905C22.5375 20.3731 22.5354 19.6154 22.18 19L13.71 4.85996C13.3475 4.26224 12.6991 3.89722 12 3.89722C11.3009 3.89722 10.6526 4.26224 10.29 4.85996Z" stroke="%23FFC700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 10V14" stroke="%23FFC700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="18" r="1" fill="%23FFC700"/></svg>');
       }
-    }
-  }
-
-  .post-image {
-    height: 100%;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 1;
-  }
-
-  .post-image__fit-width {
-    max-width: 100%;
-    height: auto;
-  }
-
-  .wrapper-post video {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    height: 100%;
-    object-fit: contain;
-    z-index: 1;
-  }
-
-  .wrapper-post .post-video__fit-width {
-    max-width: 100%;
-  }
-
-  .post-background {
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    position: absolute;
-    filter: blur(30px) brightness(0.6);
-    -webkit-filter: blur(30px) brightness(0.6);
-    -moz-filter: blur(30px) brightness(0.6);
-    -o-filter: blur(30px) brightness(0.6);
-    -ms-filter: blur(30px) brightness(0.6);
-    transform: scale(1.1);
-    z-index: 0;
-  }
-
-  .marquee {
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    height: 65px;
-    width: 100%;
-    padding: 0 10px;
-    white-space: nowrap;
-    overflow: hidden;
-    background: #A6A6A6;
-    opacity: .6;
-    color: #fff;
-    font-size: 16px;
-    z-index: 2;
-    text-transform: uppercase;
-    letter-spacing: 5px;
-  }
-
-  .marquee-text {
-    display: inline-block;
-    height: 100%;
-    padding-left: calc(100% + 20px);
-    margin: 0;
-    animation-name: marquee;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
-    opacity: 1;
-  }
-
-  .none-animation {
-    animation: none;
-  }
-
-  @keyframes marquee {
-    0% {
-      transform: translate(0, 0);
-    }
-    100% {
-      transform: translate(-100%, 0);
-    }
-  }
-
-  .marquee-content {
-    opacity: 1;
-  }
-
-  .marquee__news {
-    background: #040A95;
-  }
-
-  .marquee__photo {
-    background: #DD3C26;
-  }
-
-  .marquee__events {
-    background: #15AB63;
-  }
-
-  .marquee__ads {
-    background: #2DB6D4;
-  }
-
-  .marquee__theme-day {
-    background: #9F1F69;
-  }
-
-  .full-wide-object {
-    height: 100%;
-    width: 100%;
-    object-fit: contain;
-    background-color: $color-main;
-  }
-
-  @keyframes moveConnect {
-    0% {
-      top: 10%;
-    }
-    50% {
-      top: 50%;
-    }
-    100% {
-      top: 10%;
     }
   }
 }

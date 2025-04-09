@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, forwardRef } from '@angular/core';
-import { ControlValueAccessor, FormArray, FormBuilder, FormGroup, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, forwardRef, inject } from '@angular/core';
+import { ControlValueAccessor, FormArray, FormControl, FormGroup, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 import { BaseComponent } from '$directives/base.component';
 import { PlaylistSettings } from '$types/player.types';
+import { MediaGroup } from '../settings.types';
 
 @Component({
   selector: 'playlist-settings',
@@ -18,10 +19,12 @@ import { PlaylistSettings } from '$types/player.types';
   ]
 })
 export class PlaylistSettingsComponent extends BaseComponent implements ControlValueAccessor {
-  protected form: FormGroup = this.formBuilder.group({
-    start: [null],
-    end: [null],
-    media: this.formBuilder.array([]),
+  private changeDetectorRef = inject(ChangeDetectorRef);
+
+  protected form = new FormGroup({
+    start: new FormControl<string | null>(null),
+    end: new FormControl<string | null>(null),
+    media: new FormArray<MediaGroup>([]),
   });
 
   protected format: number = 24;
@@ -34,10 +37,7 @@ export class PlaylistSettingsComponent extends BaseComponent implements ControlV
     return this.form.get('media') as FormArray;
   }
 
-  constructor(
-    private changeDetectorRef: ChangeDetectorRef,
-    private formBuilder: FormBuilder,
-  ) {
+  constructor() {
     super();
 
     this.form.valueChanges
@@ -72,16 +72,22 @@ export class PlaylistSettingsComponent extends BaseComponent implements ControlV
     this.media.clear();
 
     settings.media.forEach((item) => {
-      this.media.push(this.formBuilder.control(item));
+      const group = new FormGroup({
+        objectType: new FormControl(item.objectType),
+        objectValue: new FormControl(item.objectValue),
+        time: new FormControl(item.time),
+      });
+
+      this.media.push(group);
     });
 
     this.isLoading = false;
-    this.changeDetectorRef.markForCheck();
+    this.changeDetectorRef.detectChanges();
   }
 
   protected deleteItem(index: number): void {
     this.media.removeAt(index);
-    this.changeDetectorRef.markForCheck();
+    this.changeDetectorRef.detectChanges();
   }
 
   protected drop(event: any): void {
@@ -90,11 +96,17 @@ export class PlaylistSettingsComponent extends BaseComponent implements ControlV
     this.media.removeAt(event.previousIndex);
     this.media.insert(event.currentIndex, media);
 
-    this.changeDetectorRef.markForCheck();
+    this.changeDetectorRef.detectChanges();
   }
 
   public addMedia(): void {
-    this.media.push(this.formBuilder.control({}));
-    this.changeDetectorRef.markForCheck();
+    const group = new FormGroup({
+      objectType: new FormControl(null),
+      objectValue: new FormControl(null),
+      time: new FormControl(null),
+    });
+
+    this.media.push(group);
+    this.changeDetectorRef.detectChanges();
   }
 }

@@ -8,19 +8,30 @@
     <circle cx="92" cy="196" r="16"/>
     <circle cx="164" cy="196" r="16"/>
   </svg>
-  <mat-form-field>
-    <select matNativeControl formControlName="objectType">
-      <option *ngFor="let itemType of playlistItemTypes" [value]="itemType.objType">{{itemType.title}}</option>
-    </select>
-  </mat-form-field>
-
-  <mat-form-field>
-    <input matInput formControlName="objectValue" (click)="processValue()">
-  </mat-form-field>
-
-  <mat-form-field *ngIf="isVisibleTime">
-    <input matInput formControlName="time">
-  </mat-form-field>
-
+  <div class="main-controls-wrapper">
+    <div class="main-controls">
+      <mat-form-field>
+        <mat-label>Тип</mat-label>
+        <select matNativeControl formControlName="objectType">
+          @for (item of playlistItemTypes; track item.objType){
+            <option [value]="item.objType">{{item.title}}</option>
+          }
+        </select>
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>Продолжительность</mat-label>
+        <input matInput formControlName="time">
+      </mat-form-field>
+    </div>
+    <div class="control-value">
+      <mat-form-field>
+        <mat-label>Значение</mat-label>
+        <input matInput formControlName="objectValue">
+      </mat-form-field>
+      @if (form.controls.objectType.value === 'video' || form.controls.objectType.value === 'image'){
+        <button type="button" class="icon-button choose-media" (click)="chooseFile()"></button>
+      }
+    </div>
+  </div>
   <button type="button" class="icon-button trash-media" (click)="onDeleteItem()"></button>
 </form>

@@ -1,4 +1,9 @@
-<img
+<video
+  #singleVideo
+  autoplay
+  muted
+  loop
   class="full-wide-object"
   [src]="currentMedia()?.objectValue"
-/>
+  (loadedmetadata)="loadedSingleData(singleVideo)">
+</video>

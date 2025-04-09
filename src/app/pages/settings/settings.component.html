@@ -1,9 +1,9 @@
 <form [formGroup]=form (submit)="saveForm()">
   <mat-tab-group (selectedIndexChange)="onTabChange($event)">
-    <mat-tab label="Настройки плейлиста">
+    <mat-tab label="Локальный плейлист">
       <playlist-settings formControlName="playlistSettings"></playlist-settings>
     </mat-tab>
-    <mat-tab label="Настройки плеера" >
+    <mat-tab label="Подключение к iTerra" >
       <player-settings formControlName="playerSettings"></player-settings>
     </mat-tab>
   </mat-tab-group>

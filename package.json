@@ -1,6 +1,6 @@
 {
   "name": "iterra-player",
-  "version": "1.1.8",
+  "version": "2.0.0",
   "main": "main.js",
   "license": "MIT",
   "type": "commonjs",
@@ -40,9 +40,10 @@
     ]
   },
   "dependencies": {
-    "@types/electron": "^1.6.10",
+    "@types/electron": "^1.6.12",
     "electron-log": "^4.4.8",
     "electron-updater": "^5.3.0",
+    "hls.js": "^1.5.20",
     "node-schedule": "^2.1.1",
     "node-telegram-bot-api": "^0.63.0",
     "postinstall": "^0.8.0"
@@ -66,8 +67,8 @@
     "angular-imask": "^7.6.1",
     "bootstrap": "^5.3.3",
     "cross-env": "^7.0.3",
-    "electron": "^25.1.1",
-    "electron-builder": "^24.6.3",
+    "electron": "^29.4.6",
+    "electron-builder": "^25.1.8",
     "jasmine-core": "~4.6.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",

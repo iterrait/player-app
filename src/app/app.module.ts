@@ -18,9 +18,13 @@ import { NgxMatTimepickerModule } from 'ngx-mat-timepicker';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
-import { AnimationBackgroundComponent } from './components/animation-background/animation-background.component';
-import { PlaylistItemComponent } from './components/playlist-item/playlist-item.component';
-import { SimpleBackgroundComponent } from './components/simple-background/simple-background.component';
+import { AnimationBackgroundComponent } from '$components/animation-background/animation-background.component';
+import { HlsMediaObjectCompponent } from '$components/media-objects/hls-media-object/hls-media-object.compponent';
+import { SingleImageMediaObjectComponent } from '$components/media-objects/single-image-media-object/single-image-media-object.component';
+import { SingleVideoMediaObjectComponent } from '$components/media-objects/single-video-media-object/single-video-media-object.component';
+import { SlotMediaObjectComponent } from '$components/media-objects/slot-media-object/slot-media-object.component';
+import { PlaylistItemComponent } from '$components/playlist-item/playlist-item.component';
+import { SimpleBackgroundComponent } from '$components/simple-background/simple-background.component';
 import { AboutComponent } from './pages/about/about.component';
 import { HomeComponent } from './pages/home/home.component';
 import { SettingsComponent } from './pages/settings/settings.component';
@@ -45,6 +49,7 @@ import { PlaylistSettingsComponent } from './pages/settings/playlist-settings/pl
     DragDropModule,
     FormsModule,
     IMaskModule,
+    HlsMediaObjectCompponent,
     HttpClientModule,
     MatInputModule,
     MatButtonModule,
@@ -56,7 +61,10 @@ import { PlaylistSettingsComponent } from './pages/settings/playlist-settings/pl
     NgxMatTimepickerModule,
     PlaylistItemComponent,
     ReactiveFormsModule,
+    SingleImageMediaObjectComponent,
+    SingleVideoMediaObjectComponent,
     SimpleBackgroundComponent,
+    SlotMediaObjectComponent,
   ],
   bootstrap: [AppComponent]
 })

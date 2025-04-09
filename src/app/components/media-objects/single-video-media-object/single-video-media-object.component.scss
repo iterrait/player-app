@@ -1,10 +1,8 @@
 @import './src/assets/style/variables';
 
 :host {
-  .full-wide-object {
-    height: 100%;
+  video {
     width: 100%;
-    object-fit: contain;
-    background-color: $color-main;
+    height: 100%;
   }
 }

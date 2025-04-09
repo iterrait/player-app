@@ -1,15 +1,18 @@
-<form [formGroup]=form class="playlist-settings">
-  <mat-progress-bar *ngIf="isLoading" mode="indeterminate"></mat-progress-bar>
+<form class="playlist-settings" [formGroup]=form>
+  @if (isLoading) {
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  }
+
   <div class="playlist-settings__item_1-2">
     <mat-form-field>
       <mat-label>Начало работы</mat-label>
       <input
         matInput
+        readonly
+        placeholder="00:00"
         formControlName="start"
         [format]=format
         [ngxMatTimepicker]="pickerStart"
-        placeholder="00:00"
-        readonly
       />
       <ngx-mat-timepicker color="primary" #pickerStart/>
     </mat-form-field>
@@ -17,19 +20,14 @@
       <mat-label>Окончание работы</mat-label>
       <input
         matInput
+        readonly
+        placeholder="00:00"
         formControlName="end"
         [format]=format
         [ngxMatTimepicker]="pickerEnd"
-        placeholder="00:00"
-        readonly
       />
       <ngx-mat-timepicker color="primary" #pickerEnd/>
     </mat-form-field>
-  </div>
-  <div *ngIf="media.controls.length" class="playlist-settings__media">
-    <div>Тип</div>
-    <div>Значение</div>
-    <div>Продолжительность (ms)</div>
   </div>
   <div
     formArrayName="media"

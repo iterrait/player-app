@@ -26,7 +26,7 @@ export class IpcService {
     this._ipc.on(channel, listener);
   }
 
-  public send(channel: string, ...args: any): void {
+  public send(channel: string, ...args: Record<string, any>[]): void {
     if (!this._ipc) {
       return;
     }

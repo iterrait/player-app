@@ -1,0 +1,10 @@
+@import './src/assets/style/variables';
+
+:host {
+  .full-wide-object {
+    height: 100%;
+    width: 100%;
+    object-fit: contain;
+    background-color: $color-main;
+  }
+}
