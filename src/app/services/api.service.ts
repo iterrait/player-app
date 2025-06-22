@@ -3,7 +3,7 @@ import {
   HttpHeaders,
   HttpParams,
 } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import {
   Observable,
   throwError,
@@ -43,10 +43,7 @@ export const jsonHeaders = {
   providedIn: 'root',
 })
 export class ApiService {
-
-  constructor(
-    private http: HttpClient,
-  ) { }
+  private http = inject(HttpClient);
 
   protected formatErrors(response: any): Observable<never> {
     return throwError(response);

@@ -6,21 +6,30 @@
     <mat-tab label="Подключение к iTerra" >
       <player-settings formControlName="playerSettings"></player-settings>
     </mat-tab>
+    <mat-tab label="Облачные настройки">
+      <cloud-connection />
+    </mat-tab>
   </mat-tab-group>
 
   <div class="playlist-footer">
-    <button
-      mat-stroked-button
-      *ngIf="isVisibleMediaButton"
-      type="button"
-      (click)="addPlaylistMedia()">
-      Добавить медиа объект
-    </button>
-    <button
-      mat-raised-button
-      color="primary"
-      class="save-button">
-      Сохранить и закрыть
-    </button>
+    @if (currentTabIndex() < 2) {
+      @if (currentTabIndex() === 0) {
+        <button
+          mat-stroked-button
+          type="button"
+          (click)="addPlaylistMedia()"
+        >
+          Добавить медиа объект
+        </button>
+      }
+      <button
+        mat-raised-button
+        color="primary"
+        class="save-button"
+        [disabled]="form.pristine || form.invalid"
+      >
+        Сохранить и закрыть
+      </button>
+    }
   </div>
 </form>

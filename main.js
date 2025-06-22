@@ -1,37 +1,63 @@
-const { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu } = require('electron');
-const { autoUpdater } = require('electron-updater');
-const log = require('electron-log');
-const fs = require('fs');
+const {
+  app,
+  BrowserWindow,
+  desktopCapturer,
+  dialog,
+  globalShortcut,
+  ipcMain,
+  Menu,
+  session,
+} = require('electron');
 const electron = require("electron");
+const { autoUpdater } = require('electron-updater');
+const fs = require('fs');
 const path = require("path");
+const log = require('electron-log');
 const schedule = require('node-schedule');
-const { desktopCapturer } = require('electron')
-
+const si = require("systeminformation");
+const crypto = require('crypto');
 const TelegramBot = require('node-telegram-bot-api');
+const axios = require('axios');
 
 let aboutWindow, configWindow, mainWindow;
 let intervalIdForSendPhotoWorkTable;
+let intervalIdForSendStatus;
 let ruleStart, ruleEnd;
 let bot, userDataPath, logPath;
-let mainWindowOptions = {
-  center: true,
-  width: 1500,
-  height: 1800,
-  autoHideMenuBar: true,
-  fullscreen: true,
-  type: 'toolbar',
-  webPreferences: {
-    nodeIntegration: true,
-    contextIsolation: false,
-    nodeIntegrationInWorker: true,
-  }
+
+const gotTheLock = app.requestSingleInstanceLock();
+const allowedDomains = {
+  'default-src': `self' 'unsafe-inline'`,
+  'connect-src': `https://player.iterra.world/ https://player.iterra.space/ https://video.dsi.ru  https://video1.dsi.ru:8091/ https://video2.dsi.ru:8091/ https://api.iterra.world/ https://dev.api.iterra.world/ https://widget.iterra.world/ https://dev.widget.iterra.world/ https://iterra.world/`,
+  'img-src': `'self' https://iterra.world/ https://dev.iterra.world/ data:`,
+  'style-src': `'self' 'unsafe-inline' https://fonts.googleapis.com`,
+  'font-src': `'self' https://fonts.gstatic.com`,
 };
+
+// develop || prod
+const mode = 'prod';
+const methods = {
+  player: {
+    develop: 'https://player.iterra.space',
+    prod: 'https://player.iterra.world',
+  },
+};
+
+const statuses = {
+  'updated': '💿',
+  'sleeping': '💤',
+  'awake': '✅',
+  'running': '🚀',
+  'connected': '⚠️',
+  'working': '✅',
+}
 
 const Store = require(`${__dirname}/core/store.ts`)
 const storeData = new Store({
   configName: 'user-preferences',
   defaults: {
     config: {},
+    player: {},
   },
 });
 
@@ -43,7 +69,6 @@ app.on('activate', function () {
   if (!mainWindow) createWindow();
 })
 
-const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 } else {
@@ -58,6 +83,8 @@ if (!gotTheLock) {
 
   app.on('ready', () => {
     const playerConfig = storeData.get('config') || {};
+    const player = storeData.get('player') || {};
+    generateToken();
 
     if (playerConfig.playerSettings && playerConfig.playerSettings.telegramBotToken) {
       bot = new TelegramBot(playerConfig.playerSettings.telegramBotToken);
@@ -65,10 +92,34 @@ if (!gotTheLock) {
       logPath = path.join(userDataPath, 'logs/main.log');
     }
 
-    createWindow();
-    sendNotify('Запустился');
-    checkForUpdate();
-    checkPhotoWorkTable();
+    if (!player.id) {
+      session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+        callback({
+          responseHeaders: Object.assign({
+            "Content-Security-Policy": [
+              `connect-src ${allowedDomains['connect-src']};
+               default-src: ${allowedDomains['default-src']}
+               img-src: ${allowedDomains['img-src']}                
+               style-src: ${allowedDomains['style-src']}                
+               font-src: ${allowedDomains['font-src']}                
+              `,
+            ]
+          }, details.responseHeaders)
+        });
+      });
+
+      launchApp();
+    } else {
+      session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+        callback({
+          responseHeaders: Object.assign({
+            "Content-Security-Policy": ["https://player.iterra.space", 'https://player.iterra.world'],
+          }, details.responseHeaders)
+        });
+      });
+
+      processPlayerData(player.id).then(() => launchApp());
+    }
 
     globalShortcut.register('Escape', function () {
       app.quit();
@@ -76,6 +127,23 @@ if (!gotTheLock) {
     });
   })
 }
+
+ipcMain.on('get-token', (event, args) => {
+  const token = storeData.get('token');
+
+  if (token) {
+    configWindow.webContents.send('device-token', token);
+    mainWindow.webContents.send('device-token', token);
+  }
+});
+
+ipcMain.on('get-player-data', (event, args) => {
+  configWindow.webContents.send('player-data', storeData.get('player'));
+});
+
+ipcMain.on('set-player-data', (event, args) => {
+  storeData.set('player', args);
+});
 
 ipcMain.on('set-player-config', (event, args) => {
   storeData.set('config', args);
@@ -119,7 +187,7 @@ ipcMain.on('log-info', function (event, arg) {
 
 ipcMain.on('connection-restored', function (event, arg) {
   log.error('connection restored');
-  sendNotify('Соединение восстановлено');
+  sendNotify('connected');
 });
 
 ipcMain.on('get-settings', function (event, arg) {
@@ -129,13 +197,25 @@ ipcMain.on('get-settings', function (event, arg) {
 // При загрузке обновления происходит автоматическая установка
 autoUpdater.on('update-downloaded', () => {
   log.info('update downloaded');
-  sendNotify('Идет обновление');
+  sendNotify('updated');
   autoUpdater.quitAndInstall();
 });
 
 function createWindow() {
-  console.log('Store', Store);
-  mainWindow = new BrowserWindow(mainWindowOptions);
+  mainWindow = new BrowserWindow({
+    center: true,
+    width: 1500,
+    height: 1800,
+    autoHideMenuBar: true,
+    fullscreen: true,
+    type: 'toolbar',
+    preload: path.join(app.getAppPath(), 'preload.js'),
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+      nodeIntegrationInWorker: true,
+    }
+  });
   mainWindow.loadURL(`file://${__dirname}/dist-electron/index.html`);
 
   const template = [
@@ -247,14 +327,6 @@ function sendNotify(status) {
     return;
   }
 
-  const statuses = {
-    'Идет обновление': '💿',
-    'Заснул': '💤',
-    'Проснулся': '✅',
-    'Запустился': '🚀',
-    'Соединение восстановлено': '⚠️',
-  }
-
   const data = [
     `Номер плеера: ${statuses[status]} #player${playerConfig.playerSettings.playerNumber}${statuses[status]}`,
     `AnyDeskID: ${playerConfig.playerSettings.anydeskId}`,
@@ -269,6 +341,8 @@ function sendNotify(status) {
   bot.sendMessage(playerConfig.playerSettings.telegramChatID, data.join('\n'))
     .then(() => log.info(status))
     .catch((error) => log.error(`Ошибка при отправке status - ${error}`));
+
+  sendStatus(status).then();
 }
 
 function checkForUpdate() {
@@ -328,13 +402,13 @@ function setSchedule(ruleStart, ruleEnd) {
 
     const config = storeData.get('config');
     mainWindow.webContents.send('player-rotation-config', config);
-    sendNotify('Проснулся');
+    sendNotify('awake');
   });
 
   schedule.scheduleJob(ruleEnd, function () {
     checkForUpdate(mainWindow);
     mainWindow.webContents.send('black-window', 'sleep');
-    sendNotify('Заснул');
+    sendNotify('sleeping');
 
     const playerConfig = storeData.get('config');
     const date = new Date();
@@ -348,4 +422,133 @@ function setSchedule(ruleStart, ruleEnd) {
         .catch((error) => log.error(`Ошибка при отправке log - ${error}`));
     }
   });
+}
+
+function generateToken() {
+  Promise.all([si.osInfo(), si.baseboard()]).then((values) => {
+    const data = [values[0].serial, values[1].model];
+    const info = data.join(',');
+    const token = crypto.createHash('sha1')
+      .update(info)
+      .digest('hex');
+
+    if (token) {
+      storeData.set('token', token);
+    }
+  });
+}
+
+function checkStatus() {
+  const HOUR = 3600000;
+  clearInterval(intervalIdForSendStatus);
+
+  // Отпавка статусов 1 раз в час
+  intervalIdForSendStatus = setInterval(() => sendStatus('working'), HOUR);
+}
+
+const sendStatus = async (status) => {
+  const player = storeData.get('player') || null;
+  const token = storeData.get('token') || null;
+
+  if (!player || !token) return;
+
+  desktopCapturer.getSources({
+    types: ['screen'],
+    thumbnailSize: {
+      height: 700,
+      width: 700,
+    }
+  }).then(async sources => {
+    const form = new FormData();
+    const file = sources[0].thumbnail.toDataURL();
+
+    form.append('file', dataURItoBlob(file), 'screen.jpg');
+    form.append('data', JSON.stringify({
+      status,
+      'status_at': new Date().toISOString(),
+    }));
+
+    try {
+      const response = await axios.post(
+        `https://player.${player.project.domain}/v1/statuses/${player.id}/`,
+        form,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+    } catch (error) {
+      log.info(error)
+    }
+  });
+};
+
+function dataURItoBlob(dataURI) {
+  // convert base64 to raw binary data held in a string
+  // doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
+  const byteString = atob(dataURI.split(',')[1]);
+  // separate out the mime component
+  const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0]
+  // write the bytes of the string to an ArrayBuffer
+  const ab = new ArrayBuffer(byteString.length);
+  // create a view into the buffer
+  const ia = new Uint8Array(ab);
+  // set the bytes of the buffer to the correct values
+  for (let i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+  // write the ArrayBuffer to a blob, and you're done
+  const blob = new Blob([ab], {type: mimeString});
+
+  return blob;
+}
+
+async function processPlayerData(playerId) {
+  const token = storeData.get('token');
+  if (!token) return;
+
+  try {
+    const response = await axios.get(
+      `${methods.player[mode]}/v1/players/${playerId}/`,
+      {
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Authorization': `Bearer ${token}`,
+        },
+      }
+    );
+
+    const player = response.data;
+    storeData.set('player', player);
+
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: Object.assign({
+          "Content-Security-Policy": [
+            `connect-src https://player.${player.project.domain}/ ${allowedDomains['connect-src']};
+                   default-src: ${allowedDomains['default-src']}
+                   img-src: ${allowedDomains['img-src']}
+                   style-src: ${allowedDomains['style-src']}
+                   font-src: ${allowedDomains['font-src']}
+                  `,
+          ]
+        }, details.responseHeaders),
+      });
+    });
+  } catch (error) {
+    log.info(error)
+  }
+}
+
+function launchApp() {
+  createWindow();
+  checkStatus();
+  sendNotify('running');
+
+  if (mode === 'prod') {
+    checkForUpdate();
+    checkPhotoWorkTable();
+  }
 }

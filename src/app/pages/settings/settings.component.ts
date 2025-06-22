@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, signal, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
 
 import { IpcService } from '$services/ipc-renderer.service';
@@ -12,6 +12,8 @@ import { PlaylistSettingsComponent } from './playlist-settings/playlist-settings
 })
 export class SettingsComponent implements AfterViewInit {
   @ViewChild(PlaylistSettingsComponent) public playlistSettings!: PlaylistSettingsComponent;
+
+  protected currentTabIndex = signal(0);
 
   protected isVisibleMediaButton = true;
   protected form: FormGroup = this.formBuilder.group({
@@ -54,7 +56,6 @@ export class SettingsComponent implements AfterViewInit {
   }
 
   protected onTabChange(index: number) {
-    this.isVisibleMediaButton = !index;
-    this.changeDetectorRef.markForCheck();
+    this.currentTabIndex.set(index);
   }
 }

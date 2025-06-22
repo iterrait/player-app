@@ -1,7 +1,6 @@
-import { ChangeDetectorRef, Component, ElementRef, ViewChild } from '@angular/core';
-import { FormBuilder } from '@angular/forms';
+import { Component, ElementRef, inject, ViewChild } from '@angular/core';
 
-import { IpcService } from '../../services/ipc-renderer.service';
+import { IpcService } from '$services/ipc-renderer.service';
 
 @Component({
   selector: 'about',
@@ -11,12 +10,7 @@ import { IpcService } from '../../services/ipc-renderer.service';
 export class AboutComponent {
   @ViewChild('version') public version!: ElementRef<HTMLElement>;
 
-  constructor(
-    private formBuilder: FormBuilder,
-    private changeDetectorRef: ChangeDetectorRef,
-    private ipcService: IpcService,
-  ) {
-  }
+  private ipcService = inject(IpcService);
 
   public ngAfterViewInit(): void {
     this.ipcService.send('get-app-version');

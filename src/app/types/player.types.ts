@@ -1,5 +1,3 @@
-import { Post, SlotManifest, SlotWidgetConfigData } from './slot.types';
-
 export type MediaType = 'slot' | 'video' | 'image' | 'hls-stream';
 export type ProjectType = 'dosaaf' | 'vBaikale' | 'siberianСharacter' | 'iterra';
 export type SingleObjectType = 'image' | 'video';
@@ -39,4 +37,29 @@ export interface FileType {
   canceled: boolean;
   filePaths: string[];
   uuid: string;
+}
+
+export interface Player {
+  id: number | null;
+  name: string | null;
+  address: string | null;
+  description: string | null;
+  capsule: Capsule;
+  location: Location;
+}
+
+export interface Location {
+  id: number | null;
+  name: string | null;
+}
+
+export interface Capsule {
+  id: number | null;
+  name: string | null;
+}
+
+export interface Project {
+  id: number | null;
+  domain: string | null;
+  systemName: string | null;
 }

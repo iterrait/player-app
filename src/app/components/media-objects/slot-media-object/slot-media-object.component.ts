@@ -130,18 +130,6 @@ export class SlotMediaObjectComponent extends BaseComponent implements OnDestroy
     );
   }
 
-  protected onLoadPostVideo(): void {
-    const ctx = this.postCanvas().nativeElement.getContext('2d');
-    if (!ctx || !this.postVideo()?.nativeElement || !this.postCanvas()) return;
-
-    this.drawCanvasVideo(
-      this.postVideo()!.nativeElement!,
-      ctx,
-      this.postCanvas().nativeElement.width,
-      this.postCanvas().nativeElement.height,
-    );
-  }
-
   private getConfigData(): void {
     const slotId = this.slotId();
 

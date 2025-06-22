@@ -1,0 +1,22 @@
+:host {
+  .cloud-connection-form {
+    display: flex;
+    flex-direction: column;
+    padding-top: 18px;
+  }
+
+  .cloud-connection__item_1-2 {
+    display: flex;
+    gap: 12px;
+  }
+
+  .cloud-connection__item_1-2 > * {
+    flex: 1;
+    margin: 0;
+    padding: 0;
+  }
+
+  button {
+    min-height: 56px;
+  }
+}

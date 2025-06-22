@@ -1,6 +1,6 @@
 {
   "name": "iterra-player",
-  "version": "2.0.1",
+  "version": "2.1.8",
   "main": "main.js",
   "license": "MIT",
   "type": "commonjs",
@@ -41,12 +41,14 @@
   },
   "dependencies": {
     "@types/electron": "^1.6.12",
+    "axios": "^1.9.0",
+    "crypto-js": "^4.2.0",
     "electron-log": "^4.4.8",
     "electron-updater": "^5.3.0",
     "hls.js": "^1.5.20",
     "node-schedule": "^2.1.1",
     "node-telegram-bot-api": "^0.63.0",
-    "postinstall": "^0.8.0"
+    "systeminformation": "^5.25.11"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^17.3.10",

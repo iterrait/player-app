@@ -12,7 +12,7 @@
   [style.top.px]="slotManifest?.position?.top ?? 0"
   [style.left.px]="slotManifest?.position?.left ?? 0"
 >
-  @if (mediaBlockInPost()?.data?.carousel[0]) {
+  @if (mediaBlockInPost()?.data?.carousel?.[0]) {
     <img
       #postImage
       class="post-image"
@@ -30,9 +30,8 @@
       loop
       preload="metadata"
       class="post-video"
-      [src]="mediaBlockInPost()?.data?.src"
+      [src]="mediaBlockInPost().data.src"
       [class.fit_into_screen]="slotConfig?.fitIntoScreen || false"
-      (loadeddata)="onLoadPostVideo()"
     ></video>
   }
 

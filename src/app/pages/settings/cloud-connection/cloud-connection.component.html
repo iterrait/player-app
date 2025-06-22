@@ -1,0 +1,30 @@
+<form
+  class="cloud-connection-form"
+  [formGroup]="form"
+  (submit)="onSubmitClick()"
+>
+  <div class="cloud-connection__item_1-2">
+    <mat-form-field>
+      <mat-label>Код для привязки плеера</mat-label>
+      <input matInput formControlName="code">
+    </mat-form-field>
+    <button
+      mat-raised-button
+      color="primary"
+      [disabled]="!code.value || currentCode()"
+    >
+      Привязать плеер
+    </button>
+  </div>
+</form>
+
+@if (message) {
+ <div>{{message}}</div>
+}
+
+@if (player()) {
+  <div>Наименование: {{player()!.name}}</div>
+  <div>Адрес: {{player()!.address}}</div>
+  <div>Описание: {{player()!.description}}</div>
+}
+

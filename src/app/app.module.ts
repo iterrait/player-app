@@ -13,7 +13,6 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTabsModule } from '@angular/material/tabs';
-
 import { NgxMatTimepickerModule } from 'ngx-mat-timepicker';
 
 import { AppRoutingModule } from './app-routing.module';
@@ -27,6 +26,7 @@ import { PlaylistItemComponent } from '$components/playlist-item/playlist-item.c
 import { SimpleBackgroundComponent } from '$components/simple-background/simple-background.component';
 import { AboutComponent } from './pages/about/about.component';
 import { HomeComponent } from './pages/home/home.component';
+import { CloudConnectionComponent } from './pages/settings/cloud-connection/cloud-connection.component';
 import { SettingsComponent } from './pages/settings/settings.component';
 import { PlayerSettingsComponent } from './pages/settings/player-settings/player-settings.component';
 import { PlaylistSettingsComponent } from './pages/settings/playlist-settings/playlist-settings.component';
@@ -35,6 +35,7 @@ import { PlaylistSettingsComponent } from './pages/settings/playlist-settings/pl
   declarations: [
     AboutComponent,
     AppComponent,
+    CloudConnectionComponent,
     HomeComponent,
     PlayerSettingsComponent,
     PlaylistSettingsComponent,
