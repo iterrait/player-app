@@ -1,71 +1,151 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, signal } from '@angular/core';
-import { FormControl, FormGroup } from '@angular/forms';
-import { IpcRendererEvent } from 'electron';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+  output,
+  QueryList,
+  signal,
+  viewChildren
+} from '@angular/core';
+import { ReactiveFormsModule } from '@angular/forms';
 
-import { BaseComponent } from '$directives/base.component';
-import { IpcService } from '$services/ipc-renderer.service';
-import { PlayerService } from '$services/player.service';
-import { Player } from '$types/player.types';
-import { CloudConnectionService } from './cloud-connection.service';
+import { ToastrService } from 'ngx-toastr';
+import { finalize, from, switchMap } from 'rxjs';
+
+import { BaseComponent } from '@iterra/app-lib/directives';
+import { ItButtonModule } from '@iterra/app-lib/it-button';
+import { ItInputModule } from '@iterra/app-lib/it-input';
+
+import { PlayerApiService } from '$services/api/player.api.service';
+import { ElectronService } from '$services/electron.service';
 
 @Component({
   selector: 'cloud-connection',
+  standalone: true,
+  imports: [
+    ItButtonModule,
+    ItInputModule,
+    ReactiveFormsModule,
+  ],
   templateUrl: './cloud-connection.component.html',
   styleUrls: ['./cloud-connection.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CloudConnectionComponent extends BaseComponent {
-  private cloudConnectionService = inject(CloudConnectionService);
-  private changeDetectorRef = inject(ChangeDetectorRef);
-  private ipcService = inject(IpcService);
-  private playerService = inject(PlayerService);
+  public deviceLinked = output();
 
-  protected player = this.playerService.player;
-  protected message: string | null = null;
+  protected inputsList = viewChildren<QueryList<ElementRef>>('codeInput');
 
-  protected form = new FormGroup({
-    code: new FormControl<string | null>(null),
-  });
+  private electronService = inject(ElectronService);
+  private playerApiService = inject(PlayerApiService);
+  private toastrService = inject(ToastrService);
 
-  protected code = this.form.controls.code;
-  protected currentCode = signal<string | null>(null);
+  protected inputCounts = 6;
+  protected isLoading = signal(false);
+  protected enteredValues: string [] = [];
 
-  constructor() {
-    super();
+  protected get checkAccessSubmit(): boolean {
+    this.enteredValues = this.inputsList()
+      // @ts-expect-error TODO
+      .map((item) => item.nativeElement.value)
+      .filter((item) => !!item);
 
-    this.ipcService.send('get-player-data');
+    return this.enteredValues.length === this.inputCounts;
+  }
 
-    this.ipcService.on('player-data', (event: IpcRendererEvent, player: Player) => {
-      this.player.set(player);
-    });
+  protected onPaste(event: ClipboardEvent, i: number): void {
+    event.preventDefault();
+    event.stopPropagation();
 
-    this.ipcService.on('device-token', (event: IpcRendererEvent, token: string) => {
-      const code = this.currentCode();
-      if (!code || !token) return;
+    const data = event.clipboardData ? event.clipboardData.getData('text').trim() : '';
 
-      this.cloudConnectionService.linkDevice(token, code)
-        .pipe(this.takeUntilDestroy())
-        .subscribe({
-          next: (player: Player) => {
-            this.player.set(player);
-            this.message = 'Плеер успешно привязан';
-            this.changeDetectorRef.detectChanges();
-            this.ipcService.send('set-player-data', player);
-          },
-          error: (error: ErrorEvent) => {
-            console.log('error', error);
-            this.message = error.error.detail ?? 'Ошибка привязки плеера';
-            this.changeDetectorRef.detectChanges();
-          },
-        });
-    });
+    if (this.isEmpty(data)) {
+      return;
+    }
+
+    this.setInputValues(data!.split(''), 0);
+
+    // @ts-expect-error TODO
+    this.inputsList()[i].nativeElement.blur();
+  }
+
+  protected onInput(event: Event, item: number): void {
+    const target = event.target;
+
+    // @ts-expect-error TODO
+    if (!event.data && !target.value) {
+      return;
+    }
+
+    // @ts-expect-error TODO
+    const value = event.data || target.value;
+
+    if (this.isEmpty(value)) {
+      return;
+    }
+
+    const values = value.toString().trim().split('');
+
+    for (let j = 0; j < values.length; j++) {
+      const index = j + item;
+      if (index > this.inputCounts - 1) {
+        break;
+      }
+    }
+
+    const next = item + values.length;
+    if (next > this.inputCounts - 1) {
+      // @ts-expect-error TODO
+      target?.blur();
+      return;
+    }
+
+    // @ts-expect-error TODO
+    this.inputsList()[next].nativeElement.focus();
   }
 
   protected onSubmitClick(): void {
-    if (!this.code.value) return;
+    if (this.enteredValues.length !== this.inputCounts) {
+      return;
+    }
 
-    this.code.disable();
-    this.currentCode.set(this.code.value);
-    this.ipcService.send('get-token', { code: this.code.value });
+    this.isLoading.set(true);
+    const code = this.enteredValues.join('');
+
+    from(this.electronService.ipcRenderer.invoke('getAuthToken'))
+      .pipe(
+        switchMap((token) => this.playerApiService.linkPLayer(code, token)),
+        finalize(() => this.isLoading.set(false)),
+        this.takeUntilDestroy(),
+      )
+      .subscribe({
+        next: (player) => {
+          this.setInputValues([], 0);
+          this.electronService.ipcRenderer.send(
+            'setPlayerDataWithReload',
+            { ...player, isPlayerLinked: true },
+          );
+          this.deviceLinked.emit();
+          this.toastrService.success('Плеер успешно привязан');
+        },
+        error: (error: ErrorEvent) => {
+          this.toastrService.error(error.error.detail ?? 'Ошибка привязки плеера');
+        },
+      });
+  }
+
+  private isEmpty(value: string): boolean {
+    return !value.toString().length;
+  }
+
+  private setInputValues(values: string[], index = 0): void {
+    for (let j = index; j < this.inputsList().length; j++) {
+      if (j === this.inputsList().length) {
+        break;
+      }
+      // @ts-expect-error TODO
+      this.inputsList()[j].nativeElement.value = values[j] || '';
+    }
   }
 }

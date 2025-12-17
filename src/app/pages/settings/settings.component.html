@@ -1,35 +1,14 @@
-<form [formGroup]=form (submit)="saveForm()">
-  <mat-tab-group (selectedIndexChange)="onTabChange($event)">
-    <mat-tab label="Локальный плейлист">
-      <playlist-settings formControlName="playlistSettings"></playlist-settings>
-    </mat-tab>
-    <mat-tab label="Подключение к iTerra" >
-      <player-settings formControlName="playerSettings"></player-settings>
-    </mat-tab>
-    <mat-tab label="Облачные настройки">
-      <cloud-connection />
-    </mat-tab>
-  </mat-tab-group>
-
-  <div class="playlist-footer">
-    @if (currentTabIndex() < 2) {
-      @if (currentTabIndex() === 0) {
-        <button
-          mat-stroked-button
-          type="button"
-          (click)="addPlaylistMedia()"
-        >
-          Добавить медиа объект
-        </button>
-      }
-      <button
-        mat-raised-button
-        color="primary"
-        class="save-button"
-        [disabled]="form.pristine || form.invalid"
-      >
-        Сохранить и закрыть
-      </button>
-    }
-  </div>
-</form>
+<mat-tab-group
+  [selectedIndex]="currentTabIndex()"
+  (selectedIndexChange)="onTabChange($event)"
+>
+  <mat-tab label="Информация о плеере">
+    <player-info />
+  </mat-tab>
+  <mat-tab label="Облачные настройки">
+    <cloud-connection
+      (deviceLinked)="onDeviceLinked()"
+    />
+  </mat-tab>
+  <mat-tab label="Локальные настройки"></mat-tab>
+</mat-tab-group>

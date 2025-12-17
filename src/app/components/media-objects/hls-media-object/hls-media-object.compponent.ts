@@ -9,8 +9,9 @@ import {
 } from '@angular/core';
 import Hls from 'hls.js';
 
-import { BaseComponent } from '$directives/base.component';
-import { PlayerMedia } from '$types/player.types';
+import { BaseComponent } from '@iterra/app-lib/directives';
+
+import { MediaObject } from '$types/media-objects.types';
 import { HlsMediaObjectService } from './hls-media-object.service';
 
 @Component({
@@ -19,9 +20,10 @@ import { HlsMediaObjectService } from './hls-media-object.service';
   templateUrl: './hls-media-object.component.html',
   styleUrls: ['./hls-media-object.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [HlsMediaObjectService],
 })
 export class HlsMediaObjectCompponent extends BaseComponent {
-  public currentMedia = input<PlayerMedia | null>(null);
+  public currentMedia = input<MediaObject | null>(null);
 
   protected videoElementRef = viewChild<ElementRef<HTMLVideoElement>>('videoElement');
 
@@ -34,7 +36,7 @@ export class HlsMediaObjectCompponent extends BaseComponent {
 
     effect(() => {
       const video = this.videoElementRef()?.nativeElement as HTMLVideoElement;
-      const hls = this.currentMedia()?.objectValue as string;
+      const hls = this.currentMedia()?.config['stream'] as string;
 
       this.loadBroadcast(video, hls);
     });

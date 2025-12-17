@@ -1,30 +1,25 @@
-<form
-  class="cloud-connection-form"
-  [formGroup]="form"
-  (submit)="onSubmitClick()"
->
-  <div class="cloud-connection__item_1-2">
-    <mat-form-field>
-      <mat-label>Код для привязки плеера</mat-label>
-      <input matInput formControlName="code">
-    </mat-form-field>
-    <button
-      mat-raised-button
-      color="primary"
-      [disabled]="!code.value || currentCode()"
-    >
-      Привязать плеер
-    </button>
+<form class="cloud-connection">
+  <div>Введите код из личного кабинета</div>
+  <div class="cloud-connection__inputs">
+    @for (item of [].constructor(inputCounts); track $index) {
+      <input
+        #codeInput
+        type="text"
+        class="cloud-connection__input"
+        maxlength="1"
+        type="text"
+        autocomplete="one-time-code"
+        (paste)="onPaste($event, $index)"
+        (input)="onInput($event, $index)"
+      >
+    }
   </div>
+  <it-button
+    buttonStyle="primary"
+    buttonType="button"
+    [disabled]="!checkAccessSubmit || isLoading()"
+    (clicked)="onSubmitClick()"
+  >
+    Привязать плеер
+  </it-button>
 </form>
-
-@if (message) {
- <div>{{message}}</div>
-}
-
-@if (player()) {
-  <div>Наименование: {{player()!.name}}</div>
-  <div>Адрес: {{player()!.address}}</div>
-  <div>Описание: {{player()!.description}}</div>
-}
-

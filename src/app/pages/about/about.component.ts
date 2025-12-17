@@ -1,22 +1,20 @@
-import { Component, ElementRef, inject, ViewChild } from '@angular/core';
+import { AsyncPipe } from '@angular/common';
+import { Component, computed, inject } from '@angular/core';
+import { from } from 'rxjs';
 
-import { IpcService } from '$services/ipc-renderer.service';
+import { ElectronService } from '$services/electron.service';
 
 @Component({
   selector: 'about',
+  standalone: true,
+  imports: [
+    AsyncPipe,
+  ],
   templateUrl: './about.component.html',
   styleUrls: ['./about.component.scss']
 })
 export class AboutComponent {
-  @ViewChild('version') public version!: ElementRef<HTMLElement>;
+  protected electronService = inject(ElectronService);
 
-  private ipcService = inject(IpcService);
-
-  public ngAfterViewInit(): void {
-    this.ipcService.send('get-app-version');
-
-    this.ipcService.on('sender-app-version', (event, args) => {
-      this.version.nativeElement.innerText = 'Version ' + args.version;
-    });
-  }
+  protected version = computed(() => from(this.electronService.ipcRenderer.invoke('getVersion')));
 }

@@ -1,98 +1,152 @@
 import {
   ChangeDetectorRef,
   Component,
+  computed,
   inject,
-  OnInit,
   signal,
 } from '@angular/core';
-import { IpcRendererEvent } from 'electron';
-import { fromEvent, merge, of, tap } from 'rxjs';
+import { ToastrService } from 'ngx-toastr';
+import { switchMap, tap } from 'rxjs';
 
-import { HlsMediaObjectService } from '$components/media-objects/hls-media-object/hls-media-object.service';
-import { SlotMediaObjectService } from '$components/media-objects/slot-media-object/slot-media-object.service';
-import { BaseComponent } from '$directives/base.component';
-import { IpcService } from '$services/ipc-renderer.service';
-import { PlayerConfig, PlayerMedia } from '$types/player.types';
+import { BaseComponent } from '@iterra/app-lib/directives';
+
+import { HlsMediaObjectCompponent } from '$components/media-objects/hls-media-object/hls-media-object.compponent';
+import { NewspaperMediaObjectComponent } from '$components/media-objects/newspaper-media-object/newspaper-media-object.component';
+import { NewspaperMediaObjectService } from '$components/media-objects/newspaper-media-object/newspaper-media-object.service';
+import { SingleImageMediaObjectComponent } from '$components/media-objects/single-image-media-object/single-image-media-object.component';
+import { SingleVideoMediaObjectComponent } from '$components/media-objects/single-video-media-object/single-video-media-object.component';
+import { AdminService } from '$services/admin.service';
+import { PlayerApiService } from '$services/api/player.api.service';
+import { DayjsService } from '$services/dayjs.service';
+import { ElectronService } from '$services/electron.service';
+import { MediaObject } from '$types/media-objects.types';
+import { Notice } from '$types/notice.types';
+import { Playlist } from '$types/playlists.types';
 
 @Component({
   selector: 'home',
+  standalone: true,
+  imports: [
+    HlsMediaObjectCompponent,
+    NewspaperMediaObjectComponent,
+    SingleImageMediaObjectComponent,
+    SingleVideoMediaObjectComponent,
+  ],
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss'],
-  providers: [HlsMediaObjectService, SlotMediaObjectService],
+  providers: [NewspaperMediaObjectService],
 })
-export class HomeComponent extends BaseComponent implements OnInit {
+export class HomeComponent extends BaseComponent {
+  private adminService = inject(AdminService);
   private changeDetectorRef = inject(ChangeDetectorRef);
-  private ipcService = inject(IpcService);
+  private dayjsService = inject(DayjsService);
+  private electronService = inject(ElectronService);
+  private newspaperMediaObjectService = inject(NewspaperMediaObjectService);
+  private playerApiService = inject(PlayerApiService);
+  private toastrService = inject(ToastrService);
 
-  protected playerConfig = signal<PlayerConfig | null>(null);
-  protected playlist = signal<PlayerMedia[]>([]);
-  protected currentMedia = signal<PlayerMedia | null>(null);
+  protected currentMedia = signal<MediaObject | null>(null);
+  protected isOnline = signal(true);
   protected mediaIndex = signal<number>(0);
-  protected showNextEntity = signal<boolean>(true);
-  protected isOnline = signal<boolean>(window.navigator.onLine);
-
   protected mediaObjectTimeoutId: NodeJS.Timeout | null = null;
+  protected statusTimeoutId: NodeJS.Timeout | null = null;
+  protected player = this.newspaperMediaObjectService.player;
+  protected playlist = signal<Playlist | null>(null);
+
+  protected mediaList = computed(() => this.playlist()?.mediaObjects ?? []);
+  protected statusInterval = 3600000;
 
   constructor() {
     super();
 
-    merge(
-      of(navigator.onLine),
-      fromEvent(window, 'online').pipe(
-        tap(() => {
-          this.ipcService.send('log-info', [{ online: 'true'}]);
-          this.isOnline.set(true);
-          this.ipcService.send('get-player-config');
+    this.electronService.ipcRenderer.addListener('getPlayerInfo', (
+      event,
+      playerId: string,
+    ) => (this.getPlayerInfo(playerId)));
 
-          setTimeout(() => this.ipcService.send('connection-restored'));
-        }),
-      ),
-      fromEvent(window, 'offline').pipe(
-        tap(() => {
-          this.ipcService.send('log-info', [{ online: 'false'}]);
-          this.isOnline.set(false);
-          this.changeDetectorRef.markForCheck();
-        }),
-      ),
-    )
-      .pipe(this.takeUntilDestroy())
-      .subscribe();
+    this.electronService.ipcRenderer.addListener('playerStart', (
+      event,
+    ) => (this.playlistStart()));
 
-    this.ipcService.on('no-connect', () => {
-      this.clearMedia();
-      this.isOnline.set(false);
-      this.changeDetectorRef.detectChanges();
+    this.electronService.ipcRenderer.addListener('showNotice', (
+      event,
+      data: Notice,
+    ) => {
+      this.toastrService[data.status](data.message);
     });
 
-    this.ipcService.on('black-window', (event, data) => {
-      this.clearMedia();
-    });
+    this.electronService.ipcRenderer.addListener('playerStop', (
+      event,
+    ) => (this.playlistStop()));
 
-    this.ipcService.on('error', () => {
-      this.clearMedia();
-      this.isOnline.set(false);
-      this.changeDetectorRef.detectChanges();
-    });
-
-    this.ipcService.on('player-rotation-config', (event: IpcRendererEvent, config: PlayerConfig) => {
-      this.playerConfig.set(config);
-      this.playlist.set(config.playlistSettings.media ?? {});
-      this.showMediaObject();
-      this.changeDetectorRef.detectChanges();
-    });
+    this.statusTimeoutId = setInterval(() => {
+      this.electronService.ipcRenderer.send('setStatus', 'working');
+    }, this.statusInterval);
   }
 
-  public ngOnInit(): void {
-    if (this.isOnline()) {
-      this.ipcService.send('get-player-config');
-    }
+  private getPlayerInfo(playerId: string): void {
+    if (!playerId) return;
+
+    this.playerApiService.getPLayerInfo(playerId)
+      .pipe(
+        tap((player) => {
+          this.player.set(player);
+          this.adminService.domain.set(player.project.domain);
+          this.adminService.projectSysname.set(player.project.systemName);
+        }),
+        switchMap(() => this.playerApiService.getPlaylist(playerId)),
+        this.takeUntilDestroy(),
+      )
+      .subscribe({
+        next: (playlist) => {
+          this.playlist.set({
+            ...playlist,
+            mediaObjects: playlist.mediaObjects.filter((item) => {
+              if (!item.startAt || !item.endAt) {
+                return true;
+              }
+              const startAt = this.dayjsService.fromDate(new Date(item.startAt));
+              const endAt = this.dayjsService.fromDate(new Date(item.endAt));
+              const currentDay =  this.dayjsService.now();
+
+              return this.dayjsService.isBetween(currentDay, startAt, endAt);
+            }),
+          });
+
+          this.electronService.ipcRenderer.send('setPlayerData', this.player());
+        },
+        error: (error: ErrorEvent) => {
+          this.toastrService.error(error.error.detail ?? 'Ошибка получения данных для плеера');
+        },
+      });
   }
 
   protected changeDurationMediaObject(duration: number): void {
     this.clearTimeouts();
     this.getNextShowMediaObject(duration
-      ?? this.playerConfig()?.playlistSettings?.media[this.mediaIndex()].time
+      ?? this.mediaList()[this.mediaIndex()].duration
       ?? 0);
+  }
+
+  private playlistStart(): void {
+    this.mediaIndex.set(0);
+    this.showMediaObject();
+  }
+
+  private playlistStop(): void {
+    this.clearMedia();
+  }
+
+  private showMediaObject(): void {
+    if (!this.mediaList().length) return;
+
+    this.currentMedia.set(this.mediaList()[this.mediaIndex()]);
+    this.changeDetectorRef.detectChanges();
+
+    const duration = this.mediaList()[this.mediaIndex()].duration;
+    if (!duration) return;
+
+    this.getNextShowMediaObject(duration);
   }
 
   private clearMedia(): void {
@@ -103,32 +157,32 @@ export class HomeComponent extends BaseComponent implements OnInit {
     this.changeDetectorRef.detectChanges();
   }
 
-  private showMediaObject(): void {
-    this.clearTimeouts();
-
-    if (!this.playlist()?.length) return;
-
-    this.currentMedia.set(this.playlist()[this.mediaIndex()]);
-    this.showNextEntity.set(true);
-    this.changeDetectorRef.detectChanges();
-
-    const duration = this.playerConfig()?.playlistSettings?.media[this.mediaIndex()].time;
-    if (!duration) return;
-
-    this.getNextShowMediaObject(duration);
-  }
-
   private getNextShowMediaObject(duration: number): void {
     this.mediaObjectTimeoutId = setTimeout(() => {
-      this.showNextEntity.set(false);
-      this.changeDetectorRef.detectChanges();
-
       let index = this.mediaIndex();
-      const nextIndex = (index === this.playlist()?.length - 1) ? 0 : ++index;
+
+      const isLast = (index === this.mediaList().length - 1);
+      const nextIndex = isLast ? 0 : index + 1;
+
+      if (isLast) {
+        this.updateConfig();
+      }
 
       this.mediaIndex.set(nextIndex);
+
       this.showMediaObject();
-    }, duration);
+    }, duration * 1000);
+  }
+
+  private updateConfig(): void {
+    const id = this.player()?.id;
+
+    if (!id) return;
+    this.playerApiService.getPlaylist(id)
+      .pipe(this.takeUntilDestroy())
+      .subscribe({
+        next: (playlist) => this.playlist.set(playlist),
+      });
   }
 
   private clearTimeouts(): void {

@@ -1,37 +1,25 @@
-<div
-  *ngIf="backgroundConfig"
-  class="background-overlay"
-  [style.width.px]="backgroundConfig.backgroundWidth || 0"
-  [style.height.px]="backgroundConfig.backgroundHeight || 0"
-  [style.top.px]="backgroundConfig.backgroundTop || 0"
-  [style.left.px]="backgroundConfig.backgroundLeft || 0"
-  [style.z-index]="backgroundConfig.backgroundLayer && backgroundConfig.backgroundLayer === 'front' ? '3' : '-1'">
-  <div class="background-overlay__title-wrapper">
-    <div class="background-overlay__title">Telegram-канал</div>
-    <div
-      #channel
-      [style.fontSize]="fontSize+'px'"
-      class="background-overlay__channel"
-    >
-      <span>&#64;</span>{{backgroundConfig.backgroundAnimationChannel}}
-    </div>
-  </div>
-  <img [src]="backgroundConfig.backgroundAnimationLogo" class="background-overlay__logo"/>
-  <div class="background-overlay__qr-wrapper">
-    <img [src]="backgroundConfig.backgroundAnimationQr" class="background-overlay__qr"/>
-  </div>
+<div class="background-overlay__title-wrapper">
   <div
-    class="background-overlay__rubric"
-    [style.height.px]="backgroundConfig.marqueeHeight ?? 65"
-    [ngClass]="rubricClassName"
+    #channel
+    [style.fontSize]="fontSize+'px'"
+    class="background-overlay__channel"
   >
-    <img
-      [style.height.px]="(backgroundConfig.marqueeHeight ?? 40) - 8"
-      [src]="'./assets/images/rubric-images/'+backgroundConfig.rubric+'.svg'">
-    <div
-      class="background-overlay__rubric-text"
-      [style.fontSize.px]="marqueeFontSize">
-      {{rubrics[backgroundConfig.rubric]}}
-    </div>
+    {{widgetName()}}
   </div>
 </div>
+
+<img [src]="backgroundAnimationLogo() | async" class="background-overlay__logo" />
+  @if (qrCode()){
+    <div
+      class="background-overlay__qr-wrapper"
+      [style.margin-bottom.px]="params().marqueeHeight"
+    >
+    <qrcode
+      class="background-overlay__qr"
+      [qrdata]="qrCode()!"
+      [width]="qrWidth()"
+      [errorCorrectionLevel]="'M'"
+    >
+    </qrcode>
+    </div>
+  }

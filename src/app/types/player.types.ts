@@ -1,65 +1,37 @@
-export type MediaType = 'slot' | 'video' | 'image' | 'hls-stream';
-export type ProjectType = 'dosaaf' | 'vBaikale' | 'siberianСharacter' | 'iterra';
-export type SingleObjectType = 'image' | 'video';
-export type WidgetType = 'posting' | 'emoji';
-
-export interface PlayerSettings {
-  address: string | null;
-  anydeskId: string | null;
-  iterraToken: string | null;
-  organization: string | null;
-  playerNumber: string | null;
-  phone: number | null;
-  project: ProjectType | null;
-  responsible: string | null;
-  telegramBotToken: string | null;
-  telegramChatID: string | null;
-}
-
-export interface PlaylistSettings {
-  start: string;
-  end: string;
-  media: PlayerMedia[];
-}
-
-export interface PlayerConfig {
-  playerSettings: PlayerSettings;
-  playlistSettings: PlaylistSettings;
-}
-
-export interface PlayerMedia {
-  objectType: MediaType;
-  objectValue: string | number;
-  time: number;
-}
-
-export interface FileType {
-  canceled: boolean;
-  filePaths: string[];
-  uuid: string;
-}
-
 export interface Player {
-  id: number | null;
-  name: string | null;
-  address: string | null;
-  description: string | null;
-  capsule: Capsule;
-  location: Location;
+  id: string;
+  name: string;
+  description: string;
+  address: string;
+  location: {
+    id: string;
+    name: string;
+  },
+  capsule: {
+    id: string;
+    name: string;
+  },
+  project: {
+    id: string;
+    domain: string;
+    systemName: string;
+  },
+  avatar: string;
+  playlist: {
+    id: string;
+    name: string;
+  },
+  startTime: string;
+  endTime: string;
+  screenResolution?: string | null;
+  isPlayerLinked?: boolean;
 }
 
-export interface Location {
-  id: number | null;
-  name: string | null;
+export interface PlayerStatus {
+  id: string;
+  status: Status;
+  statusAt: string;
+  screenshot: string;
 }
 
-export interface Capsule {
-  id: number | null;
-  name: string | null;
-}
-
-export interface Project {
-  id: number | null;
-  domain: string | null;
-  systemName: string | null;
-}
+export type Status = 'updated' | 'sleeping' | 'awake' | 'running' | 'connected' | 'working';

@@ -4,6 +4,6 @@
   muted
   loop
   class="full-wide-object"
-  [src]="currentMedia()?.objectValue"
+  [src]="media() | async"
   (loadedmetadata)="loadedSingleData(singleVideo)">
 </video>

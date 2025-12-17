@@ -1,38 +1,40 @@
-@if (currentMedia()) {
-  @if (!isOnline()) {
-    <div class="no-home-connect">
-      <div>Отсутствует соединение</div>
-    </div>
+@let media = currentMedia();
+@let playerId = player()?.id;
+@let online = isOnline();
+
+@if (media && playerId) {
+  @if (!online) {
+  <div class="no-home-connect">
+    <div>Отсутствует соединение</div>
+  </div>
   }
 
-  @switch (currentMedia()?.objectType) {
-    @case ('hls-stream') {
-      <hls-media-object [currentMedia]="currentMedia()" />
+  @switch (media.type) {
+    @case ('stream') {
+      <hls-media-object [currentMedia]="media" />
     }
-    @case ('slot') {
-      <slot-media-object
-        [showNextEntity]="showNextEntity()"
-        [currentMedia]="currentMedia()"
-        [playerSettings]="playerConfig()?.playerSettings ?? null"
-      />
+    @case ('newspaper') {
+       <newspaper-media-object
+          [currentMedia]="media"
+          [playerId]="playerId"
+       />
     }
     @case ('image') {
-      <single-image-media-object [currentMedia]="currentMedia()" />
+      <single-image-media-object [currentMedia]="media" />
     }
     @case ('video') {
       <single-video-media-object
-        [currentMedia]="currentMedia()"
+        [currentMedia]="media"
         (videoDurationChanged)="changeDurationMediaObject($event)"
       />
     }
   }
 } @else {
   <div class="sleep-block">
-    @if (!isOnline()) {
+    @if (!online) {
       <div class="no-home-connect">
         <div>Отсутствует соединение</div>
       </div>
     }
   </div>
 }
-

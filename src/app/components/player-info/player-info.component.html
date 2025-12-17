@@ -1,0 +1,38 @@
+@if (player()) {
+  <div class="info-block">
+    <div class="info-block__title">Наименование:</div>
+    <div class="info-block__value">{{player()!.name | notEmpty}}</div>
+  </div>
+  <div class="info-block">
+    <div class="info-block__title">Капсула:</div>
+    <div class="info-block__value">{{player()!.capsule.name | notEmpty}}</div>
+  </div>
+  <div class="info-block">
+    <div class="info-block__title">Локация:</div>
+    <div class="info-block__value">{{player()!.location.name | notEmpty}}</div>
+  </div>
+  <div class="info-block">
+    <div class="info-block__title">Начало работы плеера:</div>
+    <div class="info-block__value">{{player()!.startTime | notEmpty}}</div>
+  </div>
+  <div class="info-block">
+    <div class="info-block__title">Окончание работы плеера:</div>
+    <div class="info-block__value">{{player()!.endTime | notEmpty}}</div>
+  </div>
+  <div class="info-block">
+    <div class="info-block__title">Разрешение:</div>
+    <div class="info-block__value">{{player()!.screenResolution | notEmpty}}</div>
+  </div>
+  <div class="info-block">
+    <div class="info-block__title">Адрес:</div>
+    <div class="info-block__value">{{player()!.address | notEmpty}}</div>
+  </div>
+  <div class="info-block">
+    <div class="info-block__title">Описание:</div>
+    <div class="info-block__value">{{player()!.description | notEmpty}}</div>
+  </div>
+}
+
+@if (!isLoading() && !player()) {
+  <div class="empty-player">Нет информации о плеере</div>
+}

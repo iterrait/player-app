@@ -1,0 +1,39 @@
+@if (config() && posts()?.length) {
+  <canvas #postCanvas></canvas>
+
+  <div class="wrapper-post">
+    <div class="post-content">
+      <div class="post__image-wrapper">
+        <img
+          #postImage
+          class="post-image"
+          [src]="imagePath() | async"
+          (load)="onLoadPostImage()"
+        />
+      </div>
+    </div>
+    <animation-background
+      [localBasePath]="localBasePath()"
+      [params]="config()"
+      [widgetName]="currentPost()?.widget?.name ?? ''"
+      [currentPost]="currentPost()"
+    />
+  </div>
+
+  @if (config().hasMarquee) {
+    <div
+    #marqueeContainer
+    class="marquee marquee__photo"
+    [style.height.px]="config().marqueeHeight ?? defaultMarqueeHeight"
+  >
+    <div
+      #marqueeTextContainer
+      class="marquee-text"
+      [style.animationDuration.s]="marqueeSpeed"
+      [style.fontSize.px]="marqueeFontSize"
+    >
+      {{marqueeText}}
+    </div>
+  </div>
+  }
+}

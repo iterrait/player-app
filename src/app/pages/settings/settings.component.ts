@@ -1,61 +1,49 @@
-import { AfterViewInit, ChangeDetectorRef, Component, signal, ViewChild } from '@angular/core';
-import { FormBuilder, FormGroup } from '@angular/forms';
+import {Component, inject, signal} from '@angular/core';
+import { MatTabsModule } from '@angular/material/tabs';
 
-import { IpcService } from '$services/ipc-renderer.service';
-import { PlayerConfig } from '$types/player.types';
-import { PlaylistSettingsComponent } from './playlist-settings/playlist-settings.component';
+import { PlayerInfoComponent } from '$components/player-info/player-info.component';
+import { CloudConnectionComponent } from '$pages/settings/cloud-connection/cloud-connection.component';
+import {ElectronService} from '$services/electron.service';
+import {ActivatedRoute} from '@angular/router';
+import {BaseComponent} from '@iterra/app-lib/directives';
 
 @Component({
   selector: 'settings',
+  standalone: true,
+  imports: [
+    CloudConnectionComponent,
+    MatTabsModule,
+    PlayerInfoComponent,
+  ],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss']
 })
-export class SettingsComponent implements AfterViewInit {
-  @ViewChild(PlaylistSettingsComponent) public playlistSettings!: PlaylistSettingsComponent;
+export class SettingsComponent extends BaseComponent {
+  private activatedRoute = inject(ActivatedRoute);
+  private electronService = inject(ElectronService);
 
   protected currentTabIndex = signal(0);
+  protected tabs = ['info', 'cloud', 'local'];
 
-  protected isVisibleMediaButton = true;
-  protected form: FormGroup = this.formBuilder.group({
-    playerSettings: [null],
-    playlistSettings: [null],
-  });
+  constructor() {
+    super();
 
-  constructor(
-    private formBuilder: FormBuilder,
-    private changeDetectorRef: ChangeDetectorRef,
-    private ipcService: IpcService,
-  ) {
-  }
+    this.activatedRoute.queryParams
+      .pipe(this.takeUntilDestroy())
+      .subscribe((params) => {
+        const index = this.tabs.findIndex((tab) => tab === params['tab']);
 
-  public ngAfterViewInit(): void {
-    this.ipcService.send('get-settings');
-
-    this.ipcService.on('set-settings', (event, config) => {
-      this.setFormData(config);
-    });
-  }
-
-  protected setFormData(config: PlayerConfig): void {
-    this.form.reset();
-
-    this.form.patchValue({
-      playerSettings: config?.playerSettings,
-      playlistSettings: config?.playlistSettings,
-    });
-
-    this.changeDetectorRef.markForCheck();
-  }
-
-  protected saveForm(): void {
-    this.ipcService.send('set-player-config', this.form.value);
-  }
-
-  protected addPlaylistMedia(): void {
-    this.playlistSettings.addMedia();
+        if (index > -1) {
+          this.currentTabIndex.set(index);
+        }
+      });
   }
 
   protected onTabChange(index: number) {
     this.currentTabIndex.set(index);
+  }
+
+  protected onDeviceLinked(): void {
+    // this.currentTabIndex.set(0);
   }
 }
